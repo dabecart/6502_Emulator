@@ -185,11 +185,12 @@ void RTS(Instruction* instr, CPU& cpu){
 }
 
 void STA(Instruction* instr, CPU& cpu){
+    instr->name = "sta";
+
     cpu.writeToBus = true;
+    cpu.r_wb = false;
     cpu.addressBus = instr->args;
     cpu.dataBus = cpu.a;
-
-    instr->name = "sta";
 }
 
 void STX(Instruction* instr, CPU& cpu){
@@ -395,7 +396,7 @@ void Instruction::fetchInstruction(CPU &cpu){
     //Execute the function
     instr->function(instr, cpu);
     
-    instr->printDecodedInstruction();
+    instr->printDecodedInstruction(cpu);
 
     //Finalize updating the cpu
     cpu.pc += instr->byteLength;
@@ -413,7 +414,7 @@ std::string int_to_hex( T i ) {
   return std::string(hexString);
 }
 
-void Instruction::printDecodedInstruction(){
+void Instruction::printDecodedInstruction(CPU cpu){
     std::string strArgs = "";
     switch (addressingMode){
     case IMMEDIATE:
@@ -428,7 +429,9 @@ void Instruction::printDecodedInstruction(){
         break;
 
     case ACCUMULATOR:
+        strArgs += "A";
     case IMPLIED:
+        strArgs += "\t";
         break;
 
     default:
@@ -438,7 +441,19 @@ void Instruction::printDecodedInstruction(){
         break;
     }
 
+    // This is a quick fix. As the subroutineJumps variable is increased exactly during the JSR call
+    // and decreased in the RTS call, to maintain all flags aligned on this two calls, this is done.
+    static uint8_t tempSubroutineJumpCount = 0;
+    std::string tabs = "";
+    // If the subroutineJumps has changed from the previous call to this method, it has to be one of 
+    // the later calls.
+    uint8_t tabCount = MAX_SUBROUTINE_JUMPS - subroutineJumps + (tempSubroutineJumpCount<subroutineJumps) - (tempSubroutineJumpCount>subroutineJumps);
+    for(uint8_t i = 0; i < tabCount; i++) tabs += "\t";
+    if(tempSubroutineJumpCount!=subroutineJumps) tempSubroutineJumpCount = subroutineJumps;
+
     char msg[60];
-    std::sprintf(msg, "%s  %s\n", name.c_str(), strArgs.c_str());
+    std::sprintf(msg, "%s  %s%sn=%d v=%d b=%d d=%d i=%d z=%d c=%d   cycle=%d\n", 
+        name.c_str(), strArgs.c_str(), tabs.c_str(),
+        cpu.n, cpu.v, cpu.b, cpu.d, cpu.i, cpu.z, cpu.c, cpu.cycleCounter);
     std::cout << msg;
 }

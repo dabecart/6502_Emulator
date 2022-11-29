@@ -13,14 +13,12 @@ int main(){
     std::cout << "Ready\n";
 
     for(;;){
-        cpu.clearBus();
-
         // 1st: Update CPU
         Instruction::fetchInstruction(cpu);
 
         // 2nd: Update peripherals
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(250));
+        //std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 
     std::cout << "Bye!";

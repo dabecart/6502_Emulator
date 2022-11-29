@@ -10,4 +10,8 @@
 #define RAM_SIZE 16384
 #define RAM_START 0x0000
 
+inline bool getBitAt(uint32_t data, uint8_t position){
+    return (data>>position)&0x01;
+}
+
 #endif

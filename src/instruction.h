@@ -20,6 +20,8 @@
 #include <sstream>
 #include <iomanip>
 
+#define MAX_SUBROUTINE_JUMPS 2 //For debug purposes
+
 class Instruction {
 
     public: 
@@ -37,7 +39,7 @@ class Instruction {
     uint16_t args;
     std::string name;
 
-    void printDecodedInstruction();
+    void printDecodedInstruction(CPU);
     // Used for spacing in debugging
     static uint8_t subroutineJumps;
 

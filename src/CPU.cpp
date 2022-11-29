@@ -19,6 +19,7 @@ void CPU::reset(){
 
 void CPU::clearBus(){
     writeToBus = false;
+    r_wb = true;
 }
 
 uint8_t CPU::readROM(uint16_t add){

@@ -34,6 +34,7 @@ class CPU{
     bool writeToBus = false;
     uint8_t dataBus;
     uint16_t addressBus;
+    bool r_wb = true;   // Read/Write Bar. Reading = 1, Writing = 0.
 
     private:
     uint8_t ROM[ROM_SIZE];
