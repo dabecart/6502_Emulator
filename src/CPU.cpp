@@ -3,12 +3,14 @@
 CPU::CPU(){}
 
 void CPU::reset(){
-    std::ifstream input(".\\a.out", std::ios::in | std::ios::binary);
+    std::ifstream input("C:\\Users\\dbeja\\Documents\\PlatformIO\\Projects\\6502_Emulator\\src\\a.out", std::ios::in | std::ios::binary);
     if(input.is_open()){
         input.seekg(0, std::ios::beg);
         input.read(reinterpret_cast<char *>(ROM), 8192);
     }else{
-        std::cerr << "Could not read file a.out\n";
+        char msg[60];
+        std::sprintf(msg, "Could not read file a.out\n");
+        throw std::invalid_argument(msg);
     }
     input.close();
 
@@ -18,6 +20,11 @@ void CPU::reset(){
 }
 
 void CPU::clearBus(){
+    if(!writeToBus){
+        char msg[60];
+        std::sprintf(msg, "Something tried to read and clear the CPU buses but received nothing!");
+        throw std::invalid_argument(msg);
+    }
     writeToBus = false;
     r_wb = true;
 }

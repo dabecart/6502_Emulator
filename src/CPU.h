@@ -26,6 +26,8 @@ class CPU{
     uint32_t cycleCounter = 0;
 
     void reset();
+    // clearBus() has to be called whenever data is read, so the emulator acknowledges that there has not been an 
+    // useless write call.
     void clearBus();
     uint8_t readROM(uint16_t add);
     uint8_t readRAM(uint16_t add);

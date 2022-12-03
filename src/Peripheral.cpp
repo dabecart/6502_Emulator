@@ -1,6 +1,39 @@
 #include "Peripheral.h"
 
-VIA::VIA(uint16_t add, uint16_t regConnection) : Peripheral(add){
+Chip::Chip(const char chipName[], uint8_t pinCount, uint64_t IO){
+    this->pinCount = pinCount;
+    this->IO = IO;
+    this->chipName = chipName;
+}
+
+void Chip::setPinLevel(uint8_t pinNumber, bool level){
+    if(!pinNumber || pinNumber > pinCount) throwException("Pin number %d of %s not valid. No level can be set!\n", pinNumber, chipName);
+    if(!getBitAt(IO, pinNumber)) throwException("Pin %d of %s is not an OUTPUT\n", pinNumber, chipName);
+    if(getBitAt(setPins, pinNumber)) throwException("Pin %d of %s has a value not read", pinNumber, chipName);
+
+    uint64_t mask = 1<<pinNumber;
+    setPins |= mask;        // Sets the pin as set. It will store a value to be read.
+    pinoutSignals &= ~mask; // Clears the bit value
+    if(level) pinoutSignals |= level<<pinNumber;  // Sets it on the level required.
+}
+
+void Chip::setPinIO(uint8_t pinNumber, bool i_o){
+    if(!pinNumber || pinNumber > pinCount) throwException("Pin %d of %s not valid. Cannot set IO\n", pinNumber, chipName);
+
+    uint64_t mask = ~(1<<pinNumber);
+    IO &= mask;  // Clears the bit value
+    if(i_o) IO |= i_o<<pinNumber;  // Sets it on the level required.
+}
+
+bool Chip::getPinLevel(uint8_t pinNumber){
+    if(!pinNumber || pinNumber > pinCount) throwException("Pin %d of %s not valid. Cannot get pin level\n", pinNumber, chipName);
+
+    // Multiple reads can be allowed, so the setPins variable just gets cleared.
+    setPins &= ~(1<<pinNumber);
+    return getBitAt(pinoutSignals, pinNumber);
+}
+
+VIA::VIA(uint16_t add, uint16_t regConnection) : Peripheral(VIA_NAME, VIA_PIN_COUNT, 0, add){
     this->regConnection = regConnection;
 }
 
@@ -14,22 +47,48 @@ void VIA::updateFunction(CPU &cpu){
     }
 
     switch (receivedReg){
-    case 0:
-        if(cpu.r_wb){ //Reading
+    case 0:{ // Output/Input to register B
+        if(cpu.r_wb){ //Reading (inputing)
             //TODO
-        }else{
-
+        }else{  // Writing (outputing)
+            for(uint8_t i = 0; i < 8; i++){
+                // Only output something is the bus is set to OUTPUT in the DDRB.
+                if(getBitAt(dataDirectionRegisterB, i)){
+                    pinoutSignals |= (getBitAt(cpu.dataBus, i)<<(VIA_PB_PIN+i));
+                }
+            }
         }
-        break;
-    
-    default:
-        char msg[60];
-        std::sprintf(msg, "Register number %d in VIA 65C22 not supported", receivedReg);
-        throw std::invalid_argument(msg);
         break;
     }
 
-    cpu.clearBus();
+    case 1:{ // Output/Input to register A
+        if(cpu.r_wb){ //Reading (inputing)
+            //TODO
+        }else{  // Writing (outputing)
+            for(uint8_t i = 0; i < 8; i++){
+                // Only output something is the bus is set to OUTPUT in the DDRA.
+                if(getBitAt(dataDirectionRegisterA, i)) pinoutSignals |= (getBitAt(cpu.dataBus, i)<<(VIA_PA_PIN+i));
+            }
+        }
+        break;
+    }
+    
+    case 2:{ // Set DDRB
+        dataDirectionRegisterB = cpu.dataBus;
+        break;
+    }
+
+    case 3:{ // Set DDRA
+        dataDirectionRegisterA = cpu.dataBus;
+        break;
+    }
+
+    default:
+        throwException("Register number %d in VIA 65C22 not supported", receivedReg);
+        break;
+    }
+
+    cpu.clearBus(); // Data received so it is cleared for the next round.
 }
 
 LCD::LCD(LCD_Connection lcd_conn){
@@ -160,8 +219,8 @@ void LCD::fetchDataFromVIA(uint64_t viaData, LCD_Connection &data){
     for(uint8_t i = 0; i < 8; i++) data.DB[i] = getBitAt(viaData, lcd_connections.DB[i]);
 }
 
-Peripheral::Peripheral(uint16_t add){
-    this->address = add;
+Peripheral::Peripheral(const char chipName[], uint8_t pinCount, uint64_t IO, uint16_t address) : Chip(chipName, pinCount, IO){
+    this->address = address;
 }
 
 bool Peripheral::isBeingAdressed(CPU cpu){
