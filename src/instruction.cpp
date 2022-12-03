@@ -170,6 +170,7 @@ void ROR(Instruction* instr, CPU& cpu){
 }
 
 void RTS(Instruction* instr, CPU& cpu){
+    instr->name = "rts";
     if(cpu.stackPointer == 0xFE) std::cout << "Stack overflow JSR 0! ";
     if(cpu.stackPointer == 0xFF) std::cout << "Stack overflow JSR 1! ";
     uint16_t returnAdd = cpu.readRAM(++cpu.stackPointer) | (cpu.readRAM(++cpu.stackPointer)<<8);
@@ -180,33 +181,33 @@ void RTS(Instruction* instr, CPU& cpu){
     cpu.pc = returnAdd;
 
     instr->subroutineJumps--;
-
-    instr->name = "rts";
 }
 
 void STA(Instruction* instr, CPU& cpu){
     instr->name = "sta";
 
-    cpu.writeToBus = true;
+    cpu.dataBusWritten = true;
     cpu.r_wb = false;
     cpu.addressBus = instr->args;
-    cpu.dataBus = cpu.a;
+    cpu.writeDataBus(cpu.a);
 }
 
 void STX(Instruction* instr, CPU& cpu){
-    cpu.writeToBus = true;
-    cpu.addressBus = instr->args;
-    cpu.dataBus = cpu.x;
-
     instr->name = "stx";
+
+    cpu.dataBusWritten = true;
+    cpu.r_wb = false;
+    cpu.addressBus = instr->args;
+    cpu.writeDataBus(cpu.x);
 }
 
 void STY(Instruction* instr, CPU& cpu){
-    cpu.writeToBus = true;
-    cpu.addressBus = instr->args;
-    cpu.dataBus = cpu.y;
-
     instr->name = "sty";
+
+    cpu.dataBusWritten = true;
+    cpu.r_wb = false;
+    cpu.addressBus = instr->args;
+    cpu.writeDataBus(cpu.y);
 }
 
 void TAX(Instruction* instr, CPU& cpu){
@@ -284,11 +285,11 @@ const Instruction Instruction::INSTRUCTIONS[] = {
 
     Instruction(JSR, 0x20, IMMEDIATE, 3, 6), //Technically ABSOLUTE, but it works the same in this case.
     
-    Instruction(LDA, 0xA9, IMMEDIATE, 2, 2),
+    Instruction(LDA, 0xA9, IMMEDIATE, 2, 2, true),
     
-    Instruction(LDX, 0xA2, IMMEDIATE, 2, 2),
+    Instruction(LDX, 0xA2, IMMEDIATE, 2, 2, true),
     
-    Instruction(LDY, 0xA0, IMMEDIATE, 2, 2),
+    Instruction(LDY, 0xA0, IMMEDIATE, 2, 2, true),
     
     Instruction(ORA, 0x09, IMMEDIATE, 2, 2),
     
@@ -298,11 +299,11 @@ const Instruction Instruction::INSTRUCTIONS[] = {
     
     Instruction(RTS, 0x60, IMPLIED, 1, 6),
     
-    Instruction(STA, 0x8D, IMMEDIATE, 3, 4),
+    Instruction(STA, 0x8D, ABSOLUTE, 3, 4),
     
-    Instruction(STX, 0x8E, IMMEDIATE, 3, 4),
+    Instruction(STX, 0x8E, ABSOLUTE, 3, 4),
     
-    Instruction(STY, 0x8C, IMMEDIATE, 3, 4),
+    Instruction(STY, 0x8C, ABSOLUTE, 3, 4),
     
     Instruction(TAX, 0xAA, IMPLIED, 1, 2),
     
@@ -317,12 +318,13 @@ const Instruction Instruction::INSTRUCTIONS[] = {
     Instruction(TYA, 0x98, IMPLIED, 1, 2),
 };
 
-Instruction::Instruction(std::function<void(Instruction*, CPU&)> function, uint8_t opcode, uint8_t addressingMode, uint8_t byteLength, uint8_t numberOfCycles){
+Instruction::Instruction(std::function<void(Instruction*, CPU&)> function, uint8_t opcode, uint8_t addressingMode, uint8_t byteLength, uint8_t numberOfCycles, bool needsInput){
     this->function = function;
     this->opcode = opcode;
     this->addressingMode = addressingMode;
     this->byteLength = byteLength;
     this->numberOfCycles = numberOfCycles;
+    this->needsInput = needsInput;
 }
 
 uint8_t parseByte(uint32_t romRead){
@@ -334,7 +336,12 @@ uint16_t parseWord(uint32_t romRead){
 }
 
 void Instruction::fetchInstruction(CPU &cpu){
-    std::cout << std::hex << "PC: " << cpu.pc << "\t";
+    if(!cpu.expectsData){
+        cout << "\n";
+        cout << std::hex << "PC: " << cpu.pc << "\t";
+        cpu.r_wb = true;
+        cpu.addressBus = cpu.pc;
+    } 
 
     uint32_t romRead = 0;
     for(uint8_t i = 0; i < 3; i++){
@@ -356,13 +363,29 @@ void Instruction::fetchInstruction(CPU &cpu){
         throw std::invalid_argument(msg);
     }
 
+    uint8_t addrMode = instr->addressingMode;
+    if(!cpu.expectsData && instr->needsInput && addrMode!=IMMEDIATE){
+        cpu.expectsData = true;
+        uint16_t args1 = parseWord(romRead);
+        switch (addrMode) {
+            case ABSOLUTE:{
+                cpu.addressBus = args1;
+                break;
+            }
+            
+            default:
+                break;
+        }
+        return;
+    }
+
     // Fetch the required data
     uint16_t instrArguments = 0;
     // For timing sake, it takes count of how long the instruction being processed will take in the real processor.
     // For ABS_INDEXED and DP_INDEXED: In case of the adding index crossing a page boundary it will be incremented by one. 
     nextInstructionCycleIncrease = instr->numberOfCycles;
-    switch (instr->addressingMode){
-    case IMMEDIATE:
+    switch (addrMode){
+    case IMMEDIATE:{
         if(instr->byteLength == 2) instrArguments = parseByte(romRead);
         else if(instr->byteLength == 3) instrArguments = parseWord(romRead);
         else{
@@ -371,20 +394,24 @@ void Instruction::fetchInstruction(CPU &cpu){
             throw std::invalid_argument(msg);
         }
         break;
-
-    case ABSOLUTE:
-        instrArguments = cpu.readRAM(parseWord(romRead));
-        break;
+    }
 
     case ACCUMULATOR:
-    case IMPLIED:
-        instrArguments = 0;
+    case IMPLIED:{
         break;
+    }
+
+    case ABSOLUTE:{
+        if(instr->needsInput){
+            instrArguments = cpu.getDataBus();
+        }else{
+            instrArguments = parseWord(romRead);
+        }
+        break;
+    }
+
     default:
-        char msg[60];
-        std::sprintf(msg, "Addressing mode %d not supported!", instr->addressingMode);
-        throw std::invalid_argument(msg);
-        break;
+        throwException("Addressing mode %d not supported!", instr->addressingMode);
     }
 
     instr->args = instrArguments;
@@ -401,6 +428,7 @@ void Instruction::fetchInstruction(CPU &cpu){
     //Finalize updating the cpu
     cpu.pc += instr->byteLength;
     cpu.cycleCounter += nextInstructionCycleIncrease;
+    cpu.expectsData = false;
 }
 
 template< typename T >
@@ -441,19 +469,21 @@ void Instruction::printDecodedInstruction(CPU cpu){
         break;
     }
 
+    cout << name.c_str() << " " << strArgs.c_str();
+
     // This is a quick fix. As the subroutineJumps variable is increased exactly during the JSR call
     // and decreased in the RTS call, to maintain all flags aligned on this two calls, this is done.
     static uint8_t tempSubroutineJumpCount = 0;
-    std::string tabs = "";
     // If the subroutineJumps has changed from the previous call to this method, it has to be one of 
     // the later calls.
     uint8_t tabCount = MAX_SUBROUTINE_JUMPS - subroutineJumps + (tempSubroutineJumpCount<subroutineJumps) - (tempSubroutineJumpCount>subroutineJumps);
-    for(uint8_t i = 0; i < tabCount; i++) tabs += "\t";
+    for(uint8_t i = 0; i < tabCount; i++) cout << "\t";
     if(tempSubroutineJumpCount!=subroutineJumps) tempSubroutineJumpCount = subroutineJumps;
 
     char msg[60];
-    std::sprintf(msg, "%s  %s%sn=%d v=%d b=%d d=%d i=%d z=%d c=%d   cycle=%d\n", 
-        name.c_str(), strArgs.c_str(), tabs.c_str(),
-        cpu.n, cpu.v, cpu.b, cpu.d, cpu.i, cpu.z, cpu.c, cpu.cycleCounter);
+    std::sprintf(msg, "n=%d v=%d b=%d d=%d i=%d z=%d c=%d  a=%02X x=%02X y=%02X cycle=%d", 
+        cpu.n, cpu.v, cpu.b, cpu.d, cpu.i, cpu.z, cpu.c, 
+        cpu.a, cpu.x, cpu.y,
+        cpu.cycleCounter);
     std::cout << msg;
 }

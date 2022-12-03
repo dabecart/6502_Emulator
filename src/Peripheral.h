@@ -4,41 +4,17 @@
 #include "constants.h"
 #include "CPU.h"
 
-class Chip {
-    public:
-    Chip(const char chipName[], uint8_t pinCount, uint64_t IO);
-
-    const char *chipName;
-
-    uint8_t pinCount = 0; // Number of pins of the chip.
-    uint64_t pinoutSignals = 0; // Logic levels of the pins.
-
-    // Keeps control of which of the pins have its value set anywhere in code (1). When readed it
-    // clears to 0. This is a mean to beware of shortcircuits and bus contention.
-    // If a pin level is set, and other chip tries to change the pin level, it
-    // will trigger an exception.
-    uint64_t setPins = 0;
-    // 1 = Input. 0 = Output.
-    uint64_t IO = 0;
-
-    void setPinLevel(uint8_t pinNumber, bool level);
-    void setPinIO(uint8_t pinNumber, bool i_o);
-    bool getPinLevel(uint8_t pinNumber);
-
-    virtual void update()
-};
-
 class Peripheral : public Chip{
     public:
-    Peripheral(const char chipName[], uint8_t pinCount, uint64_t IO, uint16_t address);
+    Peripheral(const char chipName[], uint8_t pinCount, uint64_t IO, AddressList address);
     
-    uint16_t address;
+    AddressList address;
     bool isBeingAdressed(CPU cpu);
 
-    void process(CPU &cpu);
+    bool process(CPU &cpu);
 
     protected:
-    virtual void updateFunction(CPU &cpu) = 0;
+    virtual bool update(CPU &cpu) = 0;
 };
 
 // The chip 65C22
@@ -54,15 +30,14 @@ class VIA : public Peripheral {
     #define VIA_CB2 19
 
     public:
-    VIA(uint16_t address, uint16_t regConnection);
+    VIA(AddressList address, uint16_t regConnection);
 
     uint16_t regConnection;
 
     private:
-    void updateFunction(CPU &cpu) override;
-
     uint8_t dataDirectionRegisterB = 0; // DDRB
     uint8_t dataDirectionRegisterA = 0; // DDRA
+    bool update(CPU &cpu) override;
 
 };
 
@@ -100,6 +75,7 @@ class LCD{
     void clearDisplay();
     void recalculateDisplayedText();
     void fetchDataFromVIA(uint64_t viaData, LCD_Connection &data);
+    void printDisplay();
 };
 
 #endif

@@ -67,7 +67,8 @@
         "thread": "cpp",
         "xlocbuf": "cpp",
         "xlocmes": "cpp",
-        "xtree": "cpp"
+        "xtree": "cpp",
+        "array": "cpp"
     },
     "C_Cpp.dimInactiveRegions": false
 }
