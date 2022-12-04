@@ -12,24 +12,15 @@ LCD lcd({10, 11, 12, {0,0,0,0,13,14,15,16}});
 int main(){
     std::cout << "Initializing\n";
 
+    cpu.addChild(&via);
+    via.addChild(&lcd);
+
     cpu.reset();
 
     std::cout << "Ready\n";
 
     for(;;){
-        // 1st: Update CPU
-        Instruction::fetchInstruction(cpu);
-
-        // 2nd: Update peripherals
-        cpu.RAMListener();
-        bool updateVIAChildren = via.process(cpu);
-
-        // 3rd: Update other chips
-        if(updateVIAChildren) lcd.updateLCD(via.pinoutSignals);
-
-        // 4th: Check for peripherals answers
-        if(cpu.expectsData) Instruction::fetchInstruction(cpu);
-
+        cpu.run();
         //std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 

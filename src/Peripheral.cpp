@@ -4,28 +4,29 @@ Peripheral::Peripheral(const char chipName[], uint8_t pinCount, uint64_t IO, Add
     this->address = address;
 }
 
-bool Peripheral::isBeingAdressed(CPU cpu){
+bool Peripheral::isBeingAdressed(){
+    // TODO: It is considered that the CPU is the only one that can address, but that may change.
+    CPU* cpu = dynamic_cast<CPU*>(parent);
     for(AddressPin ad : address){
-        if(getBitAt(cpu.addressBus, ad.pinNumber) != ad.value) return false;
+        if(getBitAt(cpu->addressBus, ad.pinNumber) != ad.value) return false;
     }
     return true;
 }
 
-bool Peripheral::process(CPU &cpu){
-    if(isBeingAdressed(cpu)) return update(cpu);
-    return false;
+void Peripheral::process(){
+    if(isBeingAdressed()) updatePeripheral();
 }
 
 VIA::VIA(AddressList add, uint16_t regConnection) : Peripheral(VIA_NAME, VIA_PIN_COUNT, 0, add){
     this->regConnection = regConnection;
 }
 
-bool VIA::update(CPU &cpu){
-    bool updateChildren = false;
-    
+void VIA::updatePeripheral(){
+    CPU* cpu = dynamic_cast<CPU*>(parent);
+
     // Fetch the received register code.
     uint16_t temp = regConnection;
-    uint16_t receivedReg = cpu.addressBus & regConnection;
+    uint16_t receivedReg = cpu->addressBus & regConnection;
     while(!temp&0x01){
         temp = temp >> 1;
         receivedReg = receivedReg >> 1;
@@ -33,14 +34,14 @@ bool VIA::update(CPU &cpu){
 
     switch (receivedReg){
     case 0:{ // Output/Input to register B
-        if(cpu.r_wb){ //Reading (inputing)
+        if(cpu->r_wb){ //Reading (inputing)
             //TODO
         }else{  // Writing (outputing)
             pinoutSignals &= ~(0xFF<<VIA_PB_PIN); // Convert only this port to 0.
             for(uint8_t i = 0; i < 8; i++){
                 // Only output something is the bus is set to OUTPUT in the DDRB.
                 if(getBitAt(dataDirectionRegisterB, i)){
-                    pinoutSignals |= (getBitAt(cpu.getDataBus(), i)<<(VIA_PB_PIN+i));
+                    pinoutSignals |= (getBitAt(cpu->getDataBus(), i)<<(VIA_PB_PIN+i));
                 }
             }
             updateChildren = true;
@@ -49,13 +50,13 @@ bool VIA::update(CPU &cpu){
     }
 
     case 1:{ // Output/Input to register A
-        if(cpu.r_wb){ //Reading (inputing)
+        if(cpu->r_wb){ //Reading (inputing)
             //TODO
         }else{  // Writing (outputing)
             pinoutSignals &= ~(0xFF<<VIA_PA_PIN); // Convert only this port to 0.
             for(uint8_t i = 0; i < 8; i++){
                 // Only output something is the bus is set to OUTPUT in the DDRA.
-                if(getBitAt(dataDirectionRegisterA, i)) pinoutSignals |= (getBitAt(cpu.getDataBus(), i)<<(VIA_PA_PIN+i));
+                if(getBitAt(dataDirectionRegisterA, i)) pinoutSignals |= (getBitAt(cpu->getDataBus(), i)<<(VIA_PA_PIN+i));
             }
             updateChildren = true;
         }
@@ -63,12 +64,12 @@ bool VIA::update(CPU &cpu){
     }
     
     case 2:{ // Set DDRB
-        dataDirectionRegisterB = cpu.getDataBus();
+        dataDirectionRegisterB = cpu->getDataBus();
         break;
     }
 
     case 3:{ // Set DDRA
-        dataDirectionRegisterA = cpu.getDataBus();
+        dataDirectionRegisterA = cpu->getDataBus();
         break;
     }
 
@@ -77,15 +78,17 @@ bool VIA::update(CPU &cpu){
         break;
     }
 
-    cpu.clearBus(VIA_NAME); // Data received so it is cleared for the next round.
-    return updateChildren;
+    cpu->clearBus(VIA_NAME); // Data received so it is cleared for the next round.
 }
 
-LCD::LCD(LCD_Connection lcd_conn){
+void VIA::postProcess(){}
+
+LCD::LCD(LCD_Connection lcd_conn) : Chip("LCD"){
     this->lcd_connections = lcd_conn;
 }
 
-void LCD::updateLCD(uint64_t viaData){
+void LCD::process(){
+    uint64_t viaData = parent->pinoutSignals;
     LCD_Connection input;
     fetchDataFromVIA(viaData, input);
     
@@ -191,6 +194,8 @@ void LCD::updateLCD(uint64_t viaData){
     }
     printDisplay();
 }
+
+void LCD::postProcess(){}
 
 void LCD::clearDisplay(){
     std::fill_n(displayMemory, std::size(displayMemory), 0);

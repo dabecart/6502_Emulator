@@ -6,6 +6,11 @@ Chip::Chip(const char chipName[], uint8_t pinCount, uint64_t IO){
     this->chipName = chipName;
 }
 
+void Chip::addChild(Chip* chip){
+    children.push_back(chip);
+    chip->parent = this;
+}
+
 void Chip::setPinLevel(uint8_t pinNumber, bool level){
     if(!pinNumber || pinNumber > pinCount) throwException("Pin number %d of %s not valid. No level can be set!\n", pinNumber, chipName);
     if(!getBitAt(IO, pinNumber)) throwException("Pin %d of %s is not an OUTPUT\n", pinNumber, chipName);
@@ -31,6 +36,24 @@ bool Chip::getPinLevel(uint8_t pinNumber){
     // Multiple reads can be allowed, so the setPins variable just gets cleared.
     setPins &= ~(1<<pinNumber);
     return getBitAt(pinoutSignals, pinNumber);
+}
+
+void Chip::run(){
+    expectsData = false;
+    updateChildren = false;
+    process();
+    if(expectsData || updateChildren){
+        // This will ensure that children get the data and furthermore, answer the call from the parent.
+        postProcess();
+        runChildren();
+        if(expectsData) process();
+    }
+}
+
+void Chip::runChildren(){
+    for(Chip* child : children){
+        child->run();
+    }
 }
 
 CPU::CPU() : Chip("65C02", 40, 0){
@@ -97,4 +120,11 @@ void CPU::RAMListener(){
     }
 }
 
+// This method can be found in instruction.cpp
+/*void CPU::process(){
+    Instruction::fetchInstruction(this);
+}*/
 
+void CPU::postProcess(){
+    RAMListener();
+}

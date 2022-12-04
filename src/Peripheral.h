@@ -9,12 +9,13 @@ class Peripheral : public Chip{
     Peripheral(const char chipName[], uint8_t pinCount, uint64_t IO, AddressList address);
     
     AddressList address;
-    bool isBeingAdressed(CPU cpu);
+    bool isBeingAdressed();
 
-    bool process(CPU &cpu);
+    void process() override;
+    // postProcess() will be handled but the abstracting classes.
 
     protected:
-    virtual bool update(CPU &cpu) = 0;
+    virtual void updatePeripheral() = 0;
 };
 
 // The chip 65C22
@@ -37,8 +38,8 @@ class VIA : public Peripheral {
     private:
     uint8_t dataDirectionRegisterB = 0; // DDRB
     uint8_t dataDirectionRegisterA = 0; // DDRA
-    bool update(CPU &cpu) override;
-
+    void updatePeripheral() override;
+    void postProcess() override;
 };
 
 typedef struct{
@@ -47,7 +48,7 @@ typedef struct{
 }LCD_Connection;
 
 // A generic LCD display
-class LCD{
+class LCD : public Chip{
     public:
     // To create an LCD, it is necessary to pass the number of the pins connected to the VIA to form
     // the connections. When connecting to the VIA to fetch the data, it will return an uint64_t with 
@@ -71,7 +72,8 @@ class LCD{
     char displayedText[2][16];  // The text that is shown in the display.
     char displayMemory[80];    // The chars saved in the CGRAM, there are more here than in display!
 
-    void updateLCD(uint64_t viaData);
+    void process() override;
+    void postProcess() override;
     void clearDisplay();
     void recalculateDisplayedText();
     void fetchDataFromVIA(uint64_t viaData, LCD_Connection &data);

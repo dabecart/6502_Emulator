@@ -14,7 +14,7 @@ typedef std::vector<AddressPin> AddressList;
 
 class Chip {
     public:
-    Chip(const char chipName[], uint8_t pinCount, uint64_t IO);
+    Chip(const char chipName[], uint8_t pinCount = 0, uint64_t IO = 0);
 
     const char *chipName;
 
@@ -31,10 +31,26 @@ class Chip {
 
     // If a chip is waiting for data it will be later processed in the queue.
     bool expectsData = false;
+    bool updateChildren = false;
+    vector<Chip*> children;
+    void addChild(Chip* child);
+    Chip *parent = NULL;
 
     void setPinLevel(uint8_t pinNumber, bool level);
     void setPinIO(uint8_t pinNumber, bool i_o);
     bool getPinLevel(uint8_t pinNumber);
+
+    void run();
+    void runChildren();
+
+    // Runs the correspondant chip code. If it needs data from any of its children, it will set expectsData.
+    // process() function will then return, the children will be updated and the data will be put in the chip
+    // pins to be latter processed. This function will handle both cases, when data is being required and
+    // when data is actually passed from the child.
+    virtual void process() = 0;
+    // Used to process other stuff that are not chips, but still can be considered children. For example, the 
+    // ROM and RAM of the CPU.
+    virtual void postProcess() = 0;
 };
 
 class CPU : public Chip{
@@ -76,6 +92,9 @@ class CPU : public Chip{
 
     uint8_t readRAM(uint16_t add);
     void writeRAM(uint16_t add, uint8_t data);
+
+    void process() override;
+    void postProcess() override;
 
     private:
     uint8_t ROM[ROM_SIZE];

@@ -9,28 +9,28 @@ void throwAddressingModeError(Instruction* instr){
     throw std::invalid_argument(msg);
 }
 
-void AND(Instruction* instr, CPU& cpu){
+void AND(Instruction* instr, CPU* cpu){
     instr->name = "and";
 
-    cpu.a &= instr->args;
+    cpu->a &= instr->args;
     // FLAGS:
     // Set if MSB of result is 1.
-    cpu.n = cpu.a>>7;
+    cpu->n = cpu->a>>7;
     // Set if value is 0
-    cpu.z = cpu.a==0;
+    cpu->z = cpu->a==0;
 }
 
-void INC(Instruction* instr, CPU& cpu){
+void INC(Instruction* instr, CPU* cpu){
     instr->name = "inc";
 
     uint8_t result = 0;
     switch (instr->addressingMode) {
     case ACCUMULATOR:
-        result = ++cpu.a;
+        result = ++cpu->a;
         break;
 
     case ABSOLUTE:
-        cpu.writeRAM(instr->args, result = cpu.readRAM(instr->args)+1);
+        cpu->writeRAM(instr->args, result = cpu->readRAM(instr->args)+1);
         break;
 
     default:
@@ -40,233 +40,236 @@ void INC(Instruction* instr, CPU& cpu){
     
     // FLAGS:
     // Set if MSB of result is 1.
-    cpu.n = result>>7;
+    cpu->n = result>>7;
     // Set if value is 0
-    cpu.z = result==0;
+    cpu->z = result==0;
 }
 
-void INX(Instruction* instr, CPU& cpu){
+void INX(Instruction* instr, CPU* cpu){
     instr->name = "inx";
 
-    cpu.x++;
+    cpu->x++;
 
     // FLAGS:
     // Set if MSB of result is 1.
-    cpu.n = cpu.x>>7;
+    cpu->n = cpu->x>>7;
     // Set if value is 0
-    cpu.z = cpu.x==0;
+    cpu->z = cpu->x==0;
 }
 
-void INY(Instruction* instr, CPU& cpu){
+void INY(Instruction* instr, CPU* cpu){
     instr->name = "iny";
 
-    cpu.y++;
+    cpu->y++;
 
     // FLAGS:
     // Set if MSB of result is 1.
-    cpu.n = cpu.y>>7;
+    cpu->n = cpu->y>>7;
     // Set if value is 0
-    cpu.z = cpu.y==0;
+    cpu->z = cpu->y==0;
 }
 
-void JMP(Instruction* instr, CPU& cpu){
+void JMP(Instruction* instr, CPU* cpu){
     instr->name = "jmp";
 
     // As a cheat, I have to remove the bytes required for the JMP because they will later
     // be added to the PC in the simulation. 
-    cpu.pc = instr->args - instr->byteLength;
+    cpu->pc = instr->args - instr->byteLength;
 }
 
-void JSR(Instruction* instr, CPU& cpu){
+void JSR(Instruction* instr, CPU* cpu){
     instr->name = "jsr";
 
-    if(cpu.stackPointer == 0) std::cout << "Stack overflow JSR 0! ";
+    if(cpu->stackPointer == 0) std::cout << "Stack overflow JSR 0! ";
     // Temporal value to point to the next byte after the instruction argument bytes.
-    cpu.pc += instr->byteLength-1;
+    cpu->pc += instr->byteLength-1;
     // First store the high byte of the address.
-    cpu.writeRAM(cpu.stackPointer--, cpu.pc>>8);
+    cpu->writeRAM(cpu->stackPointer--, cpu->pc>>8);
 
-    if(cpu.stackPointer == 0) std::cout << "Stack overflow JSR 1! ";
+    if(cpu->stackPointer == 0) std::cout << "Stack overflow JSR 1! ";
     // Then the low byte.
-    cpu.writeRAM(cpu.stackPointer--, cpu.pc);
+    cpu->writeRAM(cpu->stackPointer--, cpu->pc);
     
     // As a cheat, I have to remove the bytes required for the JSR because they will later
     // be added to the PC in the simulation. 
     // In the real system, the address stored in the STACK is the CURRENT PC, later it will
     // be added one more to get the next address.
-    cpu.pc = instr->args - instr->byteLength;
+    cpu->pc = instr->args - instr->byteLength;
 
     instr->subroutineJumps++;
 }
 
-void LDA(Instruction* instr, CPU& cpu){
+void LDA(Instruction* instr, CPU* cpu){
     instr->name = "lda";
 
-    cpu.a = instr->args;
+    cpu->a = instr->args;
     // FLAGS:
     // Set if MSB of loaded value is 1.
-    cpu.n = instr->args>>7;
+    cpu->n = instr->args>>7;
     // Set if value is 0
-    cpu.z = instr->args==0;
+    cpu->z = instr->args==0;
 }
 
-void LDX(Instruction* instr, CPU& cpu){
+void LDX(Instruction* instr, CPU* cpu){
     instr->name = "ldx";
 
-    cpu.x = instr->args;
+    cpu->x = instr->args;
     // FLAGS:
     // Set if MSB of loaded value is 1.
-    cpu.n = instr->args>>7;
+    cpu->n = instr->args>>7;
     // Set if value is 0
-    cpu.z = instr->args==0;
+    cpu->z = instr->args==0;
 }
 
-void LDY(Instruction* instr, CPU& cpu){
+void LDY(Instruction* instr, CPU* cpu){
     instr->name = "ldy";
 
-    cpu.y = instr->args;
+    cpu->y = instr->args;
     // FLAGS:
     // Set if MSB of loaded value is 1.
-    cpu.n = instr->args>>7;
+    cpu->n = instr->args>>7;
     // Set if value is 0
-    cpu.z = instr->args==0;
+    cpu->z = instr->args==0;
 }
 
-void ORA(Instruction* instr, CPU& cpu){
+void ORA(Instruction* instr, CPU* cpu){
     instr->name = "ora";
 
-    cpu.a |= instr->args;
+    cpu->a |= instr->args;
     // FLAGS:
     // Set if MSB of result is 1.
-    cpu.n = cpu.a>>7;
+    cpu->n = cpu->a>>7;
     // Set if value is 0
-    cpu.z = cpu.a==0;
+    cpu->z = cpu->a==0;
 }
 
-void ROL(Instruction* instr, CPU& cpu){
+void ROL(Instruction* instr, CPU* cpu){
     instr->name = "rol";
 
-    cpu.a = (cpu.a << 1) | cpu.c;
+    cpu->a = (cpu->a << 1) | cpu->c;
 
     // FLAGS:
     // Set if MSB of result is 1.
-    cpu.n = cpu.a>>7;
+    cpu->n = cpu->a>>7;
     // MSB of address becomes the carry.
-    cpu.c = instr->args>>7;
-    cpu.z = cpu.a == 0;
+    cpu->c = instr->args>>7;
+    cpu->z = cpu->a == 0;
 }
 
-void ROR(Instruction* instr, CPU& cpu){
+void ROR(Instruction* instr, CPU* cpu){
     instr->name = "ror";
 
-    cpu.a = (cpu.a >> 1) | (cpu.c << 7);
+    cpu->a = (cpu->a >> 1) | (cpu->c << 7);
 
     // FLAGS:
     // Set if MSB of result is 1.
-    cpu.n = cpu.a>>7;
+    cpu->n = cpu->a>>7;
     // LSB of address becomes the carry.
-    cpu.c = instr->args>>7;
-    cpu.z = cpu.a == 0;
+    cpu->c = instr->args>>7;
+    cpu->z = cpu->a == 0;
 }
 
-void RTS(Instruction* instr, CPU& cpu){
+void RTS(Instruction* instr, CPU* cpu){
     instr->name = "rts";
-    if(cpu.stackPointer == 0xFE) std::cout << "Stack overflow JSR 0! ";
-    if(cpu.stackPointer == 0xFF) std::cout << "Stack overflow JSR 1! ";
-    uint16_t returnAdd = cpu.readRAM(++cpu.stackPointer) | (cpu.readRAM(++cpu.stackPointer)<<8);
+    if(cpu->stackPointer == 0xFE) std::cout << "Stack overflow JSR 0! ";
+    if(cpu->stackPointer == 0xFF) std::cout << "Stack overflow JSR 1! ";
+    uint16_t returnAdd = cpu->readRAM(++cpu->stackPointer) | (cpu->readRAM(++cpu->stackPointer)<<8);
     
     // It should be returnAdd++, but as it also happens with JSR: I have to remove the 
     // byte required for the RTS because it will later be added to the PC in the 
     // simulation. 
-    cpu.pc = returnAdd;
+    cpu->pc = returnAdd;
 
     instr->subroutineJumps--;
 }
 
-void STA(Instruction* instr, CPU& cpu){
+void STA(Instruction* instr, CPU* cpu){
     instr->name = "sta";
 
-    cpu.dataBusWritten = true;
-    cpu.r_wb = false;
-    cpu.addressBus = instr->args;
-    cpu.writeDataBus(cpu.a);
+    cpu->dataBusWritten = true;
+    cpu->r_wb = false;
+    cpu->addressBus = instr->args;
+    cpu->writeDataBus(cpu->a);
+    cpu->updateChildren = true;
 }
 
-void STX(Instruction* instr, CPU& cpu){
+void STX(Instruction* instr, CPU* cpu){
     instr->name = "stx";
 
-    cpu.dataBusWritten = true;
-    cpu.r_wb = false;
-    cpu.addressBus = instr->args;
-    cpu.writeDataBus(cpu.x);
+    cpu->dataBusWritten = true;
+    cpu->r_wb = false;
+    cpu->addressBus = instr->args;
+    cpu->writeDataBus(cpu->x);
+    cpu->updateChildren = true;
 }
 
-void STY(Instruction* instr, CPU& cpu){
+void STY(Instruction* instr, CPU* cpu){
     instr->name = "sty";
 
-    cpu.dataBusWritten = true;
-    cpu.r_wb = false;
-    cpu.addressBus = instr->args;
-    cpu.writeDataBus(cpu.y);
+    cpu->dataBusWritten = true;
+    cpu->r_wb = false;
+    cpu->addressBus = instr->args;
+    cpu->writeDataBus(cpu->y);
+    cpu->updateChildren = true;
 }
 
-void TAX(Instruction* instr, CPU& cpu){
-    cpu.x = cpu.a;
+void TAX(Instruction* instr, CPU* cpu){
+    cpu->x = cpu->a;
     // FLAGS:
     // Set if MSB of loaded value is 1.
-    cpu.n = cpu.x>>7;
+    cpu->n = cpu->x>>7;
     // Set if value is 0
-    cpu.z = cpu.x==0;
+    cpu->z = cpu->x==0;
 
     instr->name = "tax";
 }
 
-void TAY(Instruction* instr, CPU& cpu){
-    cpu.y = cpu.a;
+void TAY(Instruction* instr, CPU* cpu){
+    cpu->y = cpu->a;
     // FLAGS:
     // Set if MSB of loaded value is 1.
-    cpu.n = cpu.y>>7;
+    cpu->n = cpu->y>>7;
     // Set if value is 0
-    cpu.z = cpu.y==0;
+    cpu->z = cpu->y==0;
 
     instr->name = "tay";
 }
 
-void TSX(Instruction* instr, CPU& cpu){
-    cpu.x = cpu.stackPointer;
+void TSX(Instruction* instr, CPU* cpu){
+    cpu->x = cpu->stackPointer;
     // FLAGS:
     // Set if MSB of loaded value is 1.
-    cpu.n = cpu.x>>7;
+    cpu->n = cpu->x>>7;
     // Set if value is 0
-    cpu.z = cpu.x==0;
+    cpu->z = cpu->x==0;
 
     instr->name = "tsx";
 }
 
-void TXA(Instruction* instr, CPU& cpu){
-    cpu.a = cpu.x;
+void TXA(Instruction* instr, CPU* cpu){
+    cpu->a = cpu->x;
     // FLAGS:
     // Set if MSB of loaded value is 1.
-    cpu.n = cpu.a>>7;
+    cpu->n = cpu->a>>7;
     // Set if value is 0
-    cpu.z = cpu.a==0;
+    cpu->z = cpu->a==0;
 
     instr->name = "txa";
 }
 
-void TXS(Instruction* instr, CPU& cpu){
-    cpu.stackPointer = cpu.x | 0x0100; // 8th bit in stack always 1
+void TXS(Instruction* instr, CPU* cpu){
+    cpu->stackPointer = cpu->x | 0x0100; // 8th bit in stack always 1
 
     instr->name = "txs";
 }
 
-void TYA(Instruction* instr, CPU& cpu){
-    cpu.a = cpu.y;
+void TYA(Instruction* instr, CPU* cpu){
+    cpu->a = cpu->y;
     // FLAGS:
     // Set if MSB of loaded value is 1.
-    cpu.n = cpu.y>>7;
+    cpu->n = cpu->y>>7;
     // Set if value is 0
-    cpu.z = cpu.y==0;
+    cpu->z = cpu->y==0;
 
     instr->name = "tya";
 }
@@ -318,7 +321,7 @@ const Instruction Instruction::INSTRUCTIONS[] = {
     Instruction(TYA, 0x98, IMPLIED, 1, 2),
 };
 
-Instruction::Instruction(std::function<void(Instruction*, CPU&)> function, uint8_t opcode, uint8_t addressingMode, uint8_t byteLength, uint8_t numberOfCycles, bool needsInput){
+Instruction::Instruction(std::function<void(Instruction*, CPU*)> function, uint8_t opcode, uint8_t addressingMode, uint8_t byteLength, uint8_t numberOfCycles, bool needsInput){
     this->function = function;
     this->opcode = opcode;
     this->addressingMode = addressingMode;
@@ -335,17 +338,17 @@ uint16_t parseWord(uint32_t romRead){
     return ((romRead&0xFF)<<8) | ((romRead&0xFF00)>>8);
 }
 
-void Instruction::fetchInstruction(CPU &cpu){
-    if(!cpu.expectsData){
+void Instruction::fetchInstruction(CPU *cpu){
+    if(!cpu->expectsData){
         cout << endl;
-        cout << std::hex << "PC: " << cpu.pc << "\t";
-        cpu.r_wb = true;
-        cpu.addressBus = cpu.pc;
+        cout << std::hex << "PC: " << cpu->pc << "\t";
+        cpu->r_wb = true;
+        cpu->addressBus = cpu->pc;
     } 
 
     uint32_t romRead = 0;
     for(uint8_t i = 0; i < 3; i++){
-        romRead |= cpu.readROM(cpu.pc+i) << ((2-i)*8);
+        romRead |= cpu->readROM(cpu->pc+i) << ((2-i)*8);
     }
 
     //Find the function by opcode
@@ -357,19 +360,15 @@ void Instruction::fetchInstruction(CPU &cpu){
             break;
         }
     }
-    if(instr == NULL){
-        char msg[60];
-        std::sprintf(msg, "Instruction %02X not supported!", requiredOPCode);
-        throw std::invalid_argument(msg);
-    }
+    if(instr == NULL) throwException("Instruction %02X not supported!", requiredOPCode);
 
     uint8_t addrMode = instr->addressingMode;
-    if(!cpu.expectsData && instr->needsInput && addrMode!=IMMEDIATE){
-        cpu.expectsData = true;
+    if(!cpu->expectsData && instr->needsInput && addrMode!=IMMEDIATE){
+        cpu->expectsData = true;
         uint16_t args1 = parseWord(romRead);
         switch (addrMode) {
             case ABSOLUTE:{
-                cpu.addressBus = args1;
+                cpu->addressBus = args1;
                 break;
             }
             
@@ -403,7 +402,7 @@ void Instruction::fetchInstruction(CPU &cpu){
 
     case ABSOLUTE:{
         if(instr->needsInput){
-            instrArguments = cpu.getDataBus();
+            instrArguments = cpu->getDataBus();
         }else{
             instrArguments = parseWord(romRead);
         }
@@ -426,9 +425,9 @@ void Instruction::fetchInstruction(CPU &cpu){
     instr->printDecodedInstruction(cpu);
 
     //Finalize updating the cpu
-    cpu.pc += instr->byteLength;
-    cpu.cycleCounter += nextInstructionCycleIncrease;
-    cpu.expectsData = false;
+    cpu->pc += instr->byteLength;
+    cpu->cycleCounter += nextInstructionCycleIncrease;
+    cpu->expectsData = false;
 }
 
 template< typename T >
@@ -442,7 +441,7 @@ std::string int_to_hex( T i ) {
   return std::string(hexString);
 }
 
-void Instruction::printDecodedInstruction(CPU cpu){
+void Instruction::printDecodedInstruction(CPU* cpu){
     std::string strArgs = "";
     switch (addressingMode){
     case IMMEDIATE:
@@ -483,8 +482,12 @@ void Instruction::printDecodedInstruction(CPU cpu){
 
     char msg[60];
     std::sprintf(msg, "n=%d v=%d b=%d d=%d i=%d z=%d c=%d  a=%02X x=%02X y=%02X cycle=%d", 
-        cpu.n, cpu.v, cpu.b, cpu.d, cpu.i, cpu.z, cpu.c, 
-        cpu.a, cpu.x, cpu.y,
-        cpu.cycleCounter);
+        cpu->n, cpu->v, cpu->b, cpu->d, cpu->i, cpu->z, cpu->c, 
+        cpu->a, cpu->x, cpu->y,
+        cpu->cycleCounter);
     std::cout << msg;
+}
+
+void CPU::process(){
+    Instruction::fetchInstruction(this);
 }
