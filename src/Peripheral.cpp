@@ -100,18 +100,18 @@ void LCD::updateLCD(uint64_t viaData){
     uint8_t data = 0;
     for(uint8_t i = 0; i < 8; i++) data |= input.DB[i]<<i;
 
-    if(!rs && !rw){
-        if(!dl){ // If 4 bit mode is set, then the data is constructed in two rounds.
-            static uint8_t previousData = 0xFF; // Using only 4 bits, this value cannot be reached.
-            if(previousData == 0xFF){
-                previousData = data&0xF0;
-                return;
-            }else{
-                data = previousData | (data>>4);
-                previousData = 0xFF;
-            }
+    if(!dl){ // If 4 bit mode is set, then the data is constructed in two rounds.
+        static uint8_t previousData = 0xFF; // Using only 4 bits, this value cannot be reached.
+        if(previousData == 0xFF){
+            previousData = data&0xF0;
+            return;
+        }else{
+            data = previousData | (data>>4);
+            previousData = 0xFF;
         }
+    }
 
+    if(!rs && !rw){
         uint8_t MSB_position = 7;
         // TODO: check this
         while(!getBitAt(data, MSB_position) && MSB_position>0){MSB_position--;}
@@ -177,6 +177,14 @@ void LCD::updateLCD(uint64_t viaData){
     } else if(rs && !rw){
         // Write character to the display memory.
         displayMemory[cursorAddress] = data;
+        if(i_d) cursorAddress++;
+        else cursorAddress--;
+
+        if(s) displayShift++;
+
+        cursorAddress%=80;
+        displayShift%=40;
+
         recalculateDisplayedText();
     }else{
         throwException("RS and RW configuration not supported in LCD");
@@ -190,10 +198,15 @@ void LCD::clearDisplay(){
 }
 
 void LCD::recalculateDisplayedText(){
-    //TODO: check
-    for(int i = 0; i < 16; i++){
-        displayedText[0][i] = displayMemory[(displayShift+i)%40];
-        displayedText[1][i] = displayMemory[0x27 + (displayShift+i)%40];
+    if(n){
+        for(int i = 0; i < 16; i++){
+            displayedText[0][i] = displayMemory[(displayShift+i)%40];
+            displayedText[1][i] = displayMemory[0x28 + (displayShift+i)%40];
+        }
+    }else{
+        for(int i = 0; i < 16; i++){
+            displayedText[0][i] = displayMemory[(displayShift+i)%80];
+        }
     }
 }
 
@@ -205,11 +218,16 @@ void LCD::fetchDataFromVIA(uint64_t viaData, LCD_Connection &data){
 }
 
 void LCD::printDisplay(){
+    cout << "\t";
     for(int i = 0; i < 16; i++){
-        cout << displayedText[0][i] << " ";
+        char c = displayedText[0][i];
+        if(c < ' ') c = ' ';
+        cout << c << ' ';
     }
-    cout << " --- ";
+    cout << "--- ";
     for(int i = 0; i < 16; i++){
-        cout << displayedText[1][i] << " ";
+        char c = displayedText[1][i];
+        if(c < ' ') c = ' ';
+        cout << c << ' ';
     }
 }

@@ -337,7 +337,7 @@ uint16_t parseWord(uint32_t romRead){
 
 void Instruction::fetchInstruction(CPU &cpu){
     if(!cpu.expectsData){
-        cout << "\n";
+        cout << endl;
         cout << std::hex << "PC: " << cpu.pc << "\t";
         cpu.r_wb = true;
         cpu.addressBus = cpu.pc;
@@ -447,9 +447,12 @@ void Instruction::printDecodedInstruction(CPU cpu){
     switch (addressingMode){
     case IMMEDIATE:
         strArgs = "#";
-        if(byteLength == 2) 
+        if(byteLength == 2){
             strArgs += int_to_hex((uint8_t)args);
-        else if(byteLength == 3) strArgs += int_to_hex(args);
+            strArgs += "  ";
+        }else if(byteLength == 3){
+            strArgs += int_to_hex(args);
+        }
         break;
 
     case ABSOLUTE:
@@ -463,13 +466,11 @@ void Instruction::printDecodedInstruction(CPU cpu){
         break;
 
     default:
-        char msg[60];
-        std::sprintf(msg, "Addressing mode %d not supported for debug!", addressingMode);
-        throw std::invalid_argument(msg);
+        throwException("Addressing mode %d not supported for debug!", addressingMode);
         break;
     }
 
-    cout << name.c_str() << " " << strArgs.c_str();
+    cout << name << " " << strArgs;
 
     // This is a quick fix. As the subroutineJumps variable is increased exactly during the JSR call
     // and decreased in the RTS call, to maintain all flags aligned on this two calls, this is done.

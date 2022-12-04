@@ -56,7 +56,7 @@ class LCD{
     LCD(LCD_Connection);
     LCD_Connection lcd_connections;
 
-    bool i_d = 0;   // Cursor move direction. I/D = 1 increment.
+    bool i_d = 0;   // Cursor move direction. I/D=1 increment, I/D=0 decrement. 
     bool s = 0;     // Display shift
     bool d = 0;     // Display on/off. D = 1 on
     bool c = 0;     // Cursor on/off. C = 1 on
