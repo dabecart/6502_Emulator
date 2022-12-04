@@ -1,6 +1,6 @@
 #include "CPU.h"
 
-Chip::Chip(const char chipName[], uint8_t pinCount, uint64_t IO){
+Chip::Chip(const string chipName, uint8_t pinCount, uint64_t IO){
     this->pinCount = pinCount;
     this->IO = IO;
     this->chipName = chipName;
@@ -13,7 +13,13 @@ void Chip::addChild(Chip* chip){
 
 void Chip::setPinLevel(uint8_t pinNumber, bool level){
     if(!pinNumber || pinNumber > pinCount) throwException("Pin number %d of %s not valid. No level can be set!\n", pinNumber, chipName);
-    if(!getBitAt(IO, pinNumber)) throwException("Pin %d of %s is not an OUTPUT\n", pinNumber, chipName);
+    
+    // If expectsData = false, the caller of this function must be the chip itself, so its not possible to write to an INPUT
+    if(!expectsData && !updateChildren && getBitAt(IO, pinNumber)) throwException("Pin %d of %s is an INPUT, not output\n",pinNumber, chipName);
+    
+    // If expectsData = true, the caller of this function must be the child, so its not possible to write to an OUTPUT
+    // It would also be possible that the children is outputing something that will be read later by the parent
+    if((expectsData || updateChildren) && !getBitAt(IO, pinNumber)) throwException("Pin %d of %s is an OUTPUT, not input\n",pinNumber, chipName);
     if(getBitAt(setPins, pinNumber)) throwException("Pin %d of %s has a value not read", pinNumber, chipName);
 
     uint64_t mask = 1<<pinNumber;
@@ -36,6 +42,46 @@ bool Chip::getPinLevel(uint8_t pinNumber){
     // Multiple reads can be allowed, so the setPins variable just gets cleared.
     setPins &= ~(1<<pinNumber);
     return getBitAt(pinoutSignals, pinNumber);
+}
+
+uint8_t Chip::getByte(uint8_t LSB, uint8_t MSB){
+    if(!LSB || LSB > pinCount) throwException("Pin %d of %s not valid. Cannot getByte\n", LSB, chipName);
+    if(!MSB || MSB > pinCount) throwException("Pin %d of %s not valid. Cannot getByte\n", MSB, chipName);
+    uint8_t differenceBetweenLSBandMSB = 0;
+    if(MSB>LSB) differenceBetweenLSBandMSB = MSB-LSB;
+    else differenceBetweenLSBandMSB = LSB-MSB;
+    if(differenceBetweenLSBandMSB > 7) throwException("%s LSB-MSB > 7. Cannot set IOByte", chipName);
+
+    uint8_t result = 0;
+    uint8_t pos = LSB;
+    uint8_t bitPosition = 0;
+    do{
+        result |= getPinLevel(pos)<<bitPosition;
+        if(LSB<MSB) pos++;
+        else pos--;
+        bitPosition++;
+    }while(pos != MSB);
+    result |= getPinLevel(pos)<<differenceBetweenLSBandMSB;
+    return result;
+}
+
+void Chip::setIOByte(uint8_t LSB, uint8_t MSB, uint8_t IO_data){
+    if(!LSB || LSB > pinCount) throwException("Pin %d of %s not valid. Cannot set as IObyte\n", LSB, chipName);
+    if(!MSB || MSB > pinCount) throwException("Pin %d of %s not valid. Cannot set as IObyte\n", MSB, chipName);
+    uint8_t differenceBetweenLSBandMSB = 0;
+    if(MSB>LSB) differenceBetweenLSBandMSB = MSB-LSB;
+    else differenceBetweenLSBandMSB = LSB-MSB;
+    if(differenceBetweenLSBandMSB > 7) throwException("%s LSB-MSB > 7. Cannot set IOByte", chipName);
+
+    uint8_t pos = LSB;
+    uint8_t bitPosition = 0;
+    do{
+        setPinIO(pos, getBitAt(IO_data, bitPosition));
+        if(LSB<MSB) pos++;
+        else pos--;
+        bitPosition++;
+    }while(pos != MSB);
+    setPinIO(pos, getBitAt(IO_data, differenceBetweenLSBandMSB));
 }
 
 void Chip::run(){
@@ -119,6 +165,28 @@ void CPU::RAMListener(){
         writeRAM(addressBus, dataBus);
     }
 }
+
+void CPU::pushToStack(uint8_t data){
+    if(stackPointer == 0x100){
+        std::cout << "Stack overflow JSR 0! ";
+        stackPointer = 0x1FF;
+    }else{
+        stackPointer--;
+    }
+    writeRAM(stackPointer, data);
+}
+
+uint8_t CPU::pullFromStack(){
+    uint8_t data = readRAM(stackPointer);
+    if(stackPointer == 0x1FF){
+        std::cout << "Stack overflow JSR 0! ";
+        stackPointer = 0x100;
+    }else{
+        stackPointer++;
+    }
+    return data;
+}
+
 
 // This method can be found in instruction.cpp
 /*void CPU::process(){

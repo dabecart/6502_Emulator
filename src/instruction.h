@@ -20,7 +20,7 @@
 #include <sstream>
 #include <iomanip>
 
-#define MAX_SUBROUTINE_JUMPS 2 //For debug purposes
+#define MAX_SUBROUTINE_JUMPS 4 //For debug purposes
 
 class Instruction {
 

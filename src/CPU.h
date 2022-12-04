@@ -14,9 +14,9 @@ typedef std::vector<AddressPin> AddressList;
 
 class Chip {
     public:
-    Chip(const char chipName[], uint8_t pinCount = 0, uint64_t IO = 0);
+    Chip(const string chipName, uint8_t pinCount = 0, uint64_t IO = 0);
 
-    const char *chipName;
+    string chipName;
 
     uint8_t pinCount = 0; // Number of pins of the chip.
     uint64_t pinoutSignals = 0; // Logic levels of the pins.
@@ -29,7 +29,8 @@ class Chip {
     // 1 = Input. 0 = Output.
     uint64_t IO = 0;
 
-    // If a chip is waiting for data it will be later processed in the queue.
+    // If a chip is waiting for data it will send the instruction to the children, they will process 
+    // the information required by the CPU and it will be sent back to the CPU.
     bool expectsData = false;
     bool updateChildren = false;
     vector<Chip*> children;
@@ -39,6 +40,9 @@ class Chip {
     void setPinLevel(uint8_t pinNumber, bool level);
     void setPinIO(uint8_t pinNumber, bool i_o);
     bool getPinLevel(uint8_t pinNumber);
+    // Makes a byte fetching the data from LSB_pin to MSB_pin.
+    uint8_t getByte(uint8_t LSB_pin, uint8_t MSB_pin);
+    void setIOByte(uint8_t LSB_pin, uint8_t MSB_pin, uint8_t IO_data);
 
     void run();
     void runChildren();
@@ -95,6 +99,9 @@ class CPU : public Chip{
 
     void process() override;
     void postProcess() override;
+
+    void pushToStack(uint8_t);
+    uint8_t pullFromStack();
 
     private:
     uint8_t ROM[ROM_SIZE];

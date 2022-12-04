@@ -20,6 +20,21 @@ void AND(Instruction* instr, CPU* cpu){
     cpu->z = cpu->a==0;
 }
 
+// Branch iz z = 0
+void BNE(Instruction *instr, CPU* cpu){
+    instr->name = "bne";
+    
+    uint8_t arg = instr->args;
+    int8_t jumpDistance;
+    memcpy(&jumpDistance, &arg, 1);
+
+    if(!cpu->z){
+        cpu->pc += jumpDistance - 2; // Substract the current BNE byte length.
+        // If branch is taken, it takes a cycle more.
+        instr->nextInstructionCycleIncrease++;
+    }
+}
+
 void INC(Instruction* instr, CPU* cpu){
     instr->name = "inc";
 
@@ -30,6 +45,7 @@ void INC(Instruction* instr, CPU* cpu){
         break;
 
     case ABSOLUTE:
+    // TODO: substitute with r_w = false and update children.
         cpu->writeRAM(instr->args, result = cpu->readRAM(instr->args)+1);
         break;
 
@@ -80,15 +96,13 @@ void JMP(Instruction* instr, CPU* cpu){
 void JSR(Instruction* instr, CPU* cpu){
     instr->name = "jsr";
 
-    if(cpu->stackPointer == 0) std::cout << "Stack overflow JSR 0! ";
     // Temporal value to point to the next byte after the instruction argument bytes.
     cpu->pc += instr->byteLength-1;
-    // First store the high byte of the address.
-    cpu->writeRAM(cpu->stackPointer--, cpu->pc>>8);
 
-    if(cpu->stackPointer == 0) std::cout << "Stack overflow JSR 1! ";
+    // First store the high byte of the address.
+    cpu->pushToStack(cpu->pc>>8);
     // Then the low byte.
-    cpu->writeRAM(cpu->stackPointer--, cpu->pc);
+    cpu->pushToStack(cpu->pc);
     
     // As a cheat, I have to remove the bytes required for the JSR because they will later
     // be added to the PC in the simulation. 
@@ -132,6 +146,54 @@ void LDY(Instruction* instr, CPU* cpu){
     cpu->z = instr->args==0;
 }
 
+void PHA(Instruction* instr, CPU* cpu){
+    instr->name = "pha";
+    cpu->pushToStack(cpu->a);
+}
+
+void PHX(Instruction* instr, CPU* cpu){
+    instr->name = "phx";
+    cpu->pushToStack(cpu->x);
+}
+
+void PHY(Instruction* instr, CPU* cpu){
+    instr->name = "phy";
+    cpu->pushToStack(cpu->y);
+}
+
+void PLA(Instruction* instr, CPU* cpu){
+    instr->name = "pla";
+    cpu->a = cpu->pullFromStack();
+
+    // FLAGS:
+    // Set if MSB of loaded value is 1.
+    cpu->n = cpu->a>>7;
+    // Set if value is 0
+    cpu->z = cpu->a==0;
+}
+
+void PLX(Instruction* instr, CPU* cpu){
+    instr->name = "plx";
+    cpu->x = cpu->pullFromStack();
+
+    // FLAGS:
+    // Set if MSB of loaded value is 1.
+    cpu->n = cpu->x>>7;
+    // Set if value is 0
+    cpu->z = cpu->x==0;
+}
+
+void PLY(Instruction* instr, CPU* cpu){
+    instr->name = "ply";
+    cpu->y = cpu->pullFromStack();
+
+    // FLAGS:
+    // Set if MSB of loaded value is 1.
+    cpu->n = cpu->y>>7;
+    // Set if value is 0
+    cpu->z = cpu->y==0;
+}
+
 void ORA(Instruction* instr, CPU* cpu){
     instr->name = "ora";
 
@@ -171,9 +233,7 @@ void ROR(Instruction* instr, CPU* cpu){
 
 void RTS(Instruction* instr, CPU* cpu){
     instr->name = "rts";
-    if(cpu->stackPointer == 0xFE) std::cout << "Stack overflow JSR 0! ";
-    if(cpu->stackPointer == 0xFF) std::cout << "Stack overflow JSR 1! ";
-    uint16_t returnAdd = cpu->readRAM(++cpu->stackPointer) | (cpu->readRAM(++cpu->stackPointer)<<8);
+    uint16_t returnAdd = cpu->pullFromStack() | (cpu->pullFromStack()<<8);
     
     // It should be returnAdd++, but as it also happens with JSR: I have to remove the 
     // byte required for the RTS because it will later be added to the PC in the 
@@ -277,6 +337,8 @@ void TYA(Instruction* instr, CPU* cpu){
 const Instruction Instruction::INSTRUCTIONS[] = {
     Instruction(AND, 0x29, IMMEDIATE, 2, 2),
 
+    Instruction(BNE, 0xD0, IMMEDIATE, 2, 2),
+
     Instruction(INC, 0x1A, ACCUMULATOR, 1, 2),
     Instruction(INC, 0xEE, ABSOLUTE, 3, 6),
 
@@ -289,12 +351,23 @@ const Instruction Instruction::INSTRUCTIONS[] = {
     Instruction(JSR, 0x20, IMMEDIATE, 3, 6), //Technically ABSOLUTE, but it works the same in this case.
     
     Instruction(LDA, 0xA9, IMMEDIATE, 2, 2, true),
+    Instruction(LDA, 0xAD, ABSOLUTE, 3, 4, true),
     
     Instruction(LDX, 0xA2, IMMEDIATE, 2, 2, true),
+    Instruction(LDX, 0xAE, ABSOLUTE, 3, 4, true),
     
     Instruction(LDY, 0xA0, IMMEDIATE, 2, 2, true),
+    Instruction(LDY, 0xAC, ABSOLUTE, 3, 4, true),
     
     Instruction(ORA, 0x09, IMMEDIATE, 2, 2),
+
+    Instruction(PHA, 0x48, IMPLIED, 1, 3),
+    Instruction(PHX, 0xDA, IMPLIED, 1, 3),
+    Instruction(PHY, 0x5A, IMPLIED, 1, 3),
+
+    Instruction(PLA, 0x68, IMPLIED, 1, 4),
+    Instruction(PLX, 0xFA, IMPLIED, 1, 4),
+    Instruction(PLY, 0x7A, IMPLIED, 1, 4),
     
     Instruction(ROL, 0x2a, ACCUMULATOR, 1, 2),
     

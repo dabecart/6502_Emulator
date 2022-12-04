@@ -35,13 +35,14 @@ void VIA::updatePeripheral(){
     switch (receivedReg){
     case 0:{ // Output/Input to register B
         if(cpu->r_wb){ //Reading (inputing)
-            //TODO
+            // When reading from the BUS it is supposed that the data from the children has been set on the
+            // previous instructions.
+            cpu->writeDataBus(getByte(VIA_PB_PIN, VIA_PB_PIN+7));
         }else{  // Writing (outputing)
-            pinoutSignals &= ~(0xFF<<VIA_PB_PIN); // Convert only this port to 0.
             for(uint8_t i = 0; i < 8; i++){
                 // Only output something is the bus is set to OUTPUT in the DDRB.
                 if(getBitAt(dataDirectionRegisterB, i)){
-                    pinoutSignals |= (getBitAt(cpu->getDataBus(), i)<<(VIA_PB_PIN+i));
+                    setPinLevel(VIA_PB_PIN+i, getBitAt(cpu->getDataBus(), i));
                 }
             }
             updateChildren = true;
@@ -51,12 +52,13 @@ void VIA::updatePeripheral(){
 
     case 1:{ // Output/Input to register A
         if(cpu->r_wb){ //Reading (inputing)
-            //TODO
+            cpu->writeDataBus(getByte(VIA_PA_PIN, VIA_PA_PIN+7));
         }else{  // Writing (outputing)
-            pinoutSignals &= ~(0xFF<<VIA_PA_PIN); // Convert only this port to 0.
             for(uint8_t i = 0; i < 8; i++){
                 // Only output something is the bus is set to OUTPUT in the DDRA.
-                if(getBitAt(dataDirectionRegisterA, i)) pinoutSignals |= (getBitAt(cpu->getDataBus(), i)<<(VIA_PA_PIN+i));
+                if(getBitAt(dataDirectionRegisterA, i)){
+                    setPinLevel(VIA_PA_PIN+i, getBitAt(cpu->getDataBus(), i));
+                }
             }
             updateChildren = true;
         }
@@ -65,11 +67,15 @@ void VIA::updatePeripheral(){
     
     case 2:{ // Set DDRB
         dataDirectionRegisterB = cpu->getDataBus();
+        // Beware that for the VIA 0 means input and 1 is output.
+        setIOByte(VIA_PB_PIN, VIA_PB_PIN+7, ~dataDirectionRegisterB);
         break;
     }
 
     case 3:{ // Set DDRA
         dataDirectionRegisterA = cpu->getDataBus();
+        // Beware that for the VIA 0 means input and 1 is output.
+        setIOByte(VIA_PA_PIN, VIA_PA_PIN+7, ~dataDirectionRegisterA);
         break;
     }
 
@@ -83,20 +89,19 @@ void VIA::updatePeripheral(){
 
 void VIA::postProcess(){}
 
-LCD::LCD(LCD_Connection lcd_conn) : Chip("LCD"){
+LCD::LCD(LCD_Connection lcd_conn) : Chip(LCD_NAME){
     this->lcd_connections = lcd_conn;
+    this->IO = ULONG_MAX;  // Set all pins as inputs
 }
 
 void LCD::process(){
-    uint64_t viaData = parent->pinoutSignals;
     LCD_Connection input;
-    fetchDataFromVIA(viaData, input);
+    fetchDataFromVIA(input);
     
     bool enable = input.E;
     // Data has to be set previous to the enable signal. In some cases, it will happen that
     // the bus' data is set but the enable signal hasn't turned on yet.
     if(!enable) return;
-
 
     bool rs = input.RS;
     bool rw = input.R_W;
@@ -177,7 +182,7 @@ void LCD::process(){
             break;
         }
         }
-    } else if(rs && !rw){
+    }else if(rs && !rw){
         // Write character to the display memory.
         displayMemory[cursorAddress] = data;
         if(i_d) cursorAddress++;
@@ -189,6 +194,28 @@ void LCD::process(){
         displayShift%=40;
 
         recalculateDisplayedText();
+    }else if(!rs && rw){
+        if(dl){ // 8 bit mode
+            for(uint8_t i = 0; i < 7; i++){
+                if(lcd_connections.DB[i] != 0){ // Because it boots up in 8 bit mode, maybe the 4 lower pins are connected (4 bit mode).
+                    parent->setPinLevel(lcd_connections.DB[i], getBitAt(cursorAddress, i));
+                }
+            }
+            parent->setPinLevel(lcd_connections.DB[7], BF);
+        }else{  // 4 bit mode
+            static bool firstRead = true;
+            if(firstRead){  // Upper read
+                parent->setPinLevel(lcd_connections.DB[7], BF);
+                for(uint8_t i = 4; i < 7; i++){
+                    parent->setPinLevel(lcd_connections.DB[i], getBitAt(cursorAddress, /*6-(i-4)*/ 10-i));
+                }
+            }else{  // Lower read
+                for(uint8_t i = 4; i < 8; i++){
+                    parent->setPinLevel(lcd_connections.DB[i], getBitAt(cursorAddress, i-4));
+                }
+            }
+            firstRead = !firstRead;
+        }
     }else{
         throwException("RS and RW configuration not supported in LCD");
     }
@@ -215,11 +242,17 @@ void LCD::recalculateDisplayedText(){
     }
 }
 
-void LCD::fetchDataFromVIA(uint64_t viaData, LCD_Connection &data){
-    data.RS = getBitAt(viaData, lcd_connections.RS);
-    data.R_W = getBitAt(viaData, lcd_connections.R_W);
-    data.E = getBitAt(viaData, lcd_connections.E);
-    for(uint8_t i = 0; i < 8; i++) data.DB[i] = getBitAt(viaData, lcd_connections.DB[i]);
+void LCD::fetchDataFromVIA(LCD_Connection &data){
+    data.RS = parent->getPinLevel(lcd_connections.RS);
+    data.R_W = parent->getPinLevel(lcd_connections.R_W);
+    data.E = parent->getPinLevel(lcd_connections.E);
+    for(uint8_t i = 0; i < 8; i++){
+        if(lcd_connections.DB[i] == 0){ // Pin is not connected (4 bit mode)
+            data.DB[i] = 0;
+        }else{
+            data.DB[i] = parent->getPinLevel(lcd_connections.DB[i]);
+        }
+    }
 }
 
 void LCD::printDisplay(){

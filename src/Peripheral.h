@@ -49,6 +49,8 @@ typedef struct{
 
 // A generic LCD display
 class LCD : public Chip{
+    #define LCD_NAME "LCD"
+
     public:
     // To create an LCD, it is necessary to pass the number of the pins connected to the VIA to form
     // the connections. When connecting to the VIA to fetch the data, it will return an uint64_t with 
@@ -66,6 +68,8 @@ class LCD : public Chip{
     bool n = 0;     // Number of display lines. N=1->2 lines. N=0->1 line.
     bool f = 0;     // Character font. F=1->5x10 dots. F=0->5x8 dots.
 
+    bool BF = 0;    // Busy flag
+
     // First line goes from AC = 0x00 to 0x27, second line from 0x40 to 0x67. Total of 80 chars.
     uint8_t cursorAddress = 0;  // Where the cursor is located. 7 bit long.
     uint8_t displayShift = 0;   // The entire display can be shifted. Max 40.
@@ -76,7 +80,7 @@ class LCD : public Chip{
     void postProcess() override;
     void clearDisplay();
     void recalculateDisplayedText();
-    void fetchDataFromVIA(uint64_t viaData, LCD_Connection &data);
+    void fetchDataFromVIA(LCD_Connection &data);
     void printDisplay();
 };
 
