@@ -22,7 +22,7 @@ inline bool getBitAt(uint32_t data, uint8_t position){
 
 inline void throwException(const char format[], ...){
     cout << endl;
-    char msg[60];
+    char msg[200];
     va_list args;
     va_start(args, format);
     std::sprintf(msg, format, args);

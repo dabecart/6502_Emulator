@@ -19,15 +19,6 @@ class Chip {
     string chipName;
 
     uint8_t pinCount = 0; // Number of pins of the chip.
-    uint64_t pinoutSignals = 0; // Logic levels of the pins.
-
-    // Keeps control of which of the pins have its value set anywhere in code (1). When readed it
-    // clears to 0. This is a mean to beware of shortcircuits and bus contention.
-    // If a pin level is set, and other chip tries to change the pin level, it
-    // will trigger an exception.
-    uint64_t setPins = 0;
-    // 1 = Input. 0 = Output.
-    uint64_t IO = 0;
 
     // If a chip is waiting for data it will send the instruction to the children, they will process 
     // the information required by the CPU and it will be sent back to the CPU.
@@ -55,6 +46,17 @@ class Chip {
     // Used to process other stuff that are not chips, but still can be considered children. For example, the 
     // ROM and RAM of the CPU.
     virtual void postProcess() = 0;
+
+    private:
+    uint64_t pinoutSignals = 0; // Logic levels of the pins.
+
+    // Keeps control of which of the pins have its value set anywhere in code (1). When readed it
+    // clears to 0. This is a mean to beware of shortcircuits and bus contention.
+    // If a pin level is set, and other chip tries to change the pin level, it
+    // will trigger an exception.
+    uint64_t setPins = 0;
+    // 1 = Input. 0 = Output.
+    uint64_t IO = 0;
 };
 
 class CPU : public Chip{
@@ -89,6 +91,7 @@ class CPU : public Chip{
     uint8_t readROM(uint16_t add);
 
     void RAMListener();
+    void ROMListener();
     
     bool dataBusWritten = false; // Write to data bus
     uint16_t addressBus;
@@ -108,6 +111,7 @@ class CPU : public Chip{
     uint8_t RAM[RAM_SIZE];
 
     AddressList RAM_address;
+    AddressList ROM_address;
 
     uint8_t dataBus;
 

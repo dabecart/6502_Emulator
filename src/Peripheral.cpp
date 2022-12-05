@@ -91,7 +91,6 @@ void VIA::postProcess(){}
 
 LCD::LCD(LCD_Connection lcd_conn) : Chip(LCD_NAME){
     this->lcd_connections = lcd_conn;
-    this->IO = ULONG_MAX;  // Set all pins as inputs
 }
 
 void LCD::process(){
@@ -109,11 +108,15 @@ void LCD::process(){
     for(uint8_t i = 0; i < 8; i++) data |= input.DB[i]<<i;
 
     if(!dl){ // If 4 bit mode is set, then the data is constructed in two rounds.
+        static bool lastRS = rs, lastRW = rw;
         static uint8_t previousData = 0xFF; // Using only 4 bits, this value cannot be reached.
         if(previousData == 0xFF){
+            lastRS = rs;
+            lastRW = rw;
             previousData = data&0xF0;
             return;
         }else{
+            if(lastRS != rs || lastRW != rw) throwException("LCD: If 4bit mode selected, data must come in two packages. RS/RW signals changed after one packet!");
             data = previousData | (data>>4);
             previousData = 0xFF;
         }
@@ -127,25 +130,29 @@ void LCD::process(){
         switch (MSB_position) {
         case 0:{ // Clear display
             clearDisplay();
+            cout << "LCD: display clear";
             break;
         }
 
         case 1:{ // Return home
             cursorAddress = 0;
             displayShift = 0;
+            cout << "LCD: Return home";
             break;
         }
         
         case 2:{ // Entry mode set
             i_d = getBitAt(data, 1);
             s = getBitAt(data, 0);
+            cout << "LCD: Cursor move (i_d): " << i_d << ". Display shift (s): " << s << ".";
             break;
         }
 
         case 3:{ // Display on/off control
-            d = getBitAt(data, 0);
+            d = getBitAt(data, 2);
             c = getBitAt(data, 1);
-            b = getBitAt(data, 2);
+            b = getBitAt(data, 0);
+            cout << "LCD: Display on/off (d): " << d << ". Cursor on/off (c): " << c << ". Blink cursor on/off (b): " << b << ".";
             break;
         }
 
@@ -160,6 +167,7 @@ void LCD::process(){
                 cursorAddress+=increment;
                 cursorAddress%=80;
             }
+            printDisplay();
             break;
         }
 
@@ -167,6 +175,7 @@ void LCD::process(){
             dl = getBitAt(data, 4);
             n = getBitAt(data, 3);
             f = getBitAt(data, 2);
+            cout << "LCD: Data length (8bit/4bit): " << dl << " LCD display lines (2/1): " << n << " Font: " << f << ".";
             break;
         }
 
@@ -174,6 +183,7 @@ void LCD::process(){
 
         case 7:{ // Set cursor address (DDRAM)
             cursorAddress = data&0x7F;
+            cout << "LCD: Cursor set to " << cursorAddress; 
             break;        
         }
 
@@ -194,6 +204,7 @@ void LCD::process(){
         displayShift%=40;
 
         recalculateDisplayedText();
+        printDisplay();
     }else if(!rs && rw){
         if(dl){ // 8 bit mode
             for(uint8_t i = 0; i < 7; i++){
@@ -219,7 +230,6 @@ void LCD::process(){
     }else{
         throwException("RS and RW configuration not supported in LCD");
     }
-    printDisplay();
 }
 
 void LCD::postProcess(){}
@@ -256,7 +266,11 @@ void LCD::fetchDataFromVIA(LCD_Connection &data){
 }
 
 void LCD::printDisplay(){
-    cout << "\t";
+    if(!d){
+        cout << "LCD is OFF";
+        return;
+    }
+    cout << "\tLCD: ";
     for(int i = 0; i < 16; i++){
         char c = displayedText[0][i];
         if(c < ' ') c = ' ';

@@ -105,6 +105,7 @@ void Chip::runChildren(){
 CPU::CPU() : Chip("65C02", 40, 0){
     //this->IO = 0x0F<<CPU_DATA_BUS;
     RAM_address = {{15,0}, {14,0}};
+    ROM_address = {{15,1}, {14,1}, {13,1}};
 }
 
 void CPU::reset(){
@@ -158,12 +159,18 @@ void CPU::RAMListener(){
     for(AddressPin ad : RAM_address){
         if(getBitAt(addressBus, ad.pinNumber) != ad.value) return;
     }
-
     if(r_wb){
         dataBus = readRAM(addressBus);
     }else{
         writeRAM(addressBus, dataBus);
     }
+}
+
+void CPU::ROMListener(){
+    for(AddressPin ad : ROM_address){
+        if(getBitAt(addressBus, ad.pinNumber) != ad.value) return;
+    }
+    dataBus = readROM(addressBus);
 }
 
 void CPU::pushToStack(uint8_t data){
@@ -187,12 +194,12 @@ uint8_t CPU::pullFromStack(){
     return data;
 }
 
+void CPU::postProcess(){
+    RAMListener();
+    ROMListener();
+}
 
 // This method can be found in instruction.cpp
 /*void CPU::process(){
     Instruction::fetchInstruction(this);
 }*/
-
-void CPU::postProcess(){
-    RAMListener();
-}

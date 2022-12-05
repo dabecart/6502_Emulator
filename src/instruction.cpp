@@ -20,6 +20,24 @@ void AND(Instruction* instr, CPU* cpu){
     cpu->z = cpu->a==0;
 }
 
+// Branch iz z = 1
+void BEQ(Instruction *instr, CPU* cpu){
+    instr->name = "beq";
+    
+    uint8_t arg = instr->args;
+    int8_t jumpDistance;
+    memcpy(&jumpDistance, &arg, 1);
+
+    if(cpu->z){
+        uint16_t temp = cpu->pc;
+        cpu->pc += jumpDistance;
+        // If branch is taken, it takes a cycle more.
+        instr->nextInstructionCycleIncrease++;
+        // Add one cycle more if branch taken crosses boundary.
+        if(temp>>8 != (cpu->pc+2)>>8) instr->nextInstructionCycleIncrease++;
+    }
+}
+
 // Branch iz z = 0
 void BNE(Instruction *instr, CPU* cpu){
     instr->name = "bne";
@@ -29,7 +47,7 @@ void BNE(Instruction *instr, CPU* cpu){
     memcpy(&jumpDistance, &arg, 1);
 
     if(!cpu->z){
-        cpu->pc += jumpDistance - 2; // Substract the current BNE byte length.
+        cpu->pc += jumpDistance;
         // If branch is taken, it takes a cycle more.
         instr->nextInstructionCycleIncrease++;
     }
@@ -337,6 +355,8 @@ void TYA(Instruction* instr, CPU* cpu){
 const Instruction Instruction::INSTRUCTIONS[] = {
     Instruction(AND, 0x29, IMMEDIATE, 2, 2),
 
+    Instruction(BEQ, 0xF0, IMMEDIATE, 2, 2),
+
     Instruction(BNE, 0xD0, IMMEDIATE, 2, 2),
 
     Instruction(INC, 0x1A, ACCUMULATOR, 1, 2),
@@ -352,12 +372,15 @@ const Instruction Instruction::INSTRUCTIONS[] = {
     
     Instruction(LDA, 0xA9, IMMEDIATE, 2, 2, true),
     Instruction(LDA, 0xAD, ABSOLUTE, 3, 4, true),
+    Instruction(LDA, 0xBD, ABS_INDEXED_X, 3, 4, true),
     
     Instruction(LDX, 0xA2, IMMEDIATE, 2, 2, true),
     Instruction(LDX, 0xAE, ABSOLUTE, 3, 4, true),
+    Instruction(LDX, 0xBE, ABS_INDEXED_Y, 3, 4, true),
     
     Instruction(LDY, 0xA0, IMMEDIATE, 2, 2, true),
     Instruction(LDY, 0xAC, ABSOLUTE, 3, 4, true),
+    Instruction(LDY, 0xBC, ABS_INDEXED_X, 3, 4, true),
     
     Instruction(ORA, 0x09, IMMEDIATE, 2, 2),
 
@@ -417,7 +440,8 @@ void Instruction::fetchInstruction(CPU *cpu){
         cout << std::hex << "PC: " << cpu->pc << "\t";
         cpu->r_wb = true;
         cpu->addressBus = cpu->pc;
-    } 
+        nextInstructionCycleIncrease = 0;
+    }
 
     uint32_t romRead = 0;
     for(uint8_t i = 0; i < 3; i++){
@@ -436,12 +460,29 @@ void Instruction::fetchInstruction(CPU *cpu){
     if(instr == NULL) throwException("Instruction %02X not supported!", requiredOPCode);
 
     uint8_t addrMode = instr->addressingMode;
-    if(!cpu->expectsData && instr->needsInput && addrMode!=IMMEDIATE){
+    bool needsSubsequentProcess = !cpu->expectsData && instr->needsInput && addrMode!=IMMEDIATE;
+    if(needsSubsequentProcess){
         cpu->expectsData = true;
         uint16_t args1 = parseWord(romRead);
         switch (addrMode) {
             case ABSOLUTE:{
                 cpu->addressBus = args1;
+                break;
+            }
+
+            case ABS_INDEXED_X:{
+                uint16_t temp = cpu->addressBus;
+                cpu->addressBus = args1 + cpu->x;
+                // Check if adding index crosses a page boundary
+                if(temp>>8 != cpu->addressBus>>8) nextInstructionCycleIncrease++;
+                break;
+            }
+
+            case ABS_INDEXED_Y:{
+                uint16_t temp = cpu->addressBus;
+                cpu->addressBus = args1 + cpu->y;
+                // Check if adding index crosses a page boundary
+                if(temp>>8 != cpu->addressBus>>8) nextInstructionCycleIncrease++;
                 break;
             }
             
@@ -455,7 +496,7 @@ void Instruction::fetchInstruction(CPU *cpu){
     uint16_t instrArguments = 0;
     // For timing sake, it takes count of how long the instruction being processed will take in the real processor.
     // For ABS_INDEXED and DP_INDEXED: In case of the adding index crossing a page boundary it will be incremented by one. 
-    nextInstructionCycleIncrease = instr->numberOfCycles;
+    nextInstructionCycleIncrease += instr->numberOfCycles;
     switch (addrMode){
     case IMMEDIATE:{
         if(instr->byteLength == 2) instrArguments = parseByte(romRead);
@@ -473,11 +514,30 @@ void Instruction::fetchInstruction(CPU *cpu){
         break;
     }
 
+
     case ABSOLUTE:{
+        if(instr->needsInput){
+            instrArguments = cpu->getDataBus(); // i.e. LDA
+        }else{
+            instrArguments = parseWord(romRead); // i.e. STA
+        }
+        break;
+    }
+
+    case ABS_INDEXED_X:{
         if(instr->needsInput){
             instrArguments = cpu->getDataBus();
         }else{
-            instrArguments = parseWord(romRead);
+            instrArguments = parseWord(romRead) + cpu->x;
+        }
+        break;
+    }
+
+    case ABS_INDEXED_Y:{
+        if(instr->needsInput){
+            instrArguments = cpu->getDataBus();
+        }else{
+            instrArguments = parseWord(romRead) + cpu->y;
         }
         break;
     }
@@ -495,6 +555,7 @@ void Instruction::fetchInstruction(CPU *cpu){
     //Execute the function
     instr->function(instr, cpu);
     
+    instr->args = parseWord(romRead);   // To format correctly the debug log
     instr->printDecodedInstruction(cpu);
 
     //Finalize updating the cpu
@@ -517,7 +578,7 @@ std::string int_to_hex( T i ) {
 void Instruction::printDecodedInstruction(CPU* cpu){
     std::string strArgs = "";
     switch (addressingMode){
-    case IMMEDIATE:
+    case IMMEDIATE:{
         strArgs = "#";
         if(byteLength == 2){
             strArgs += int_to_hex((uint8_t)args);
@@ -526,10 +587,24 @@ void Instruction::printDecodedInstruction(CPU* cpu){
             strArgs += int_to_hex(args);
         }
         break;
+    }
 
-    case ABSOLUTE:
+    case ABSOLUTE:{
         strArgs += int_to_hex(args);
         break;
+    }
+
+    case ABS_INDEXED_X:{
+        strArgs += int_to_hex(args);
+        strArgs += ",x";
+        break;
+    }
+
+    case ABS_INDEXED_Y:{
+        strArgs += int_to_hex(args);
+        strArgs += ",y";
+        break;
+    }
 
     case ACCUMULATOR:
         strArgs += "A";
@@ -554,7 +629,7 @@ void Instruction::printDecodedInstruction(CPU* cpu){
     if(tempSubroutineJumpCount!=subroutineJumps) tempSubroutineJumpCount = subroutineJumps;
 
     char msg[60];
-    std::sprintf(msg, "n=%d v=%d b=%d d=%d i=%d z=%d c=%d  a=%02X x=%02X y=%02X cycle=%d", 
+    std::sprintf(msg, "n=%d v=%d b=%d d=%d i=%d z=%d c=%d  a=%02X x=%02X y=%02X cycle=%d  ", 
         cpu->n, cpu->v, cpu->b, cpu->d, cpu->i, cpu->z, cpu->c, 
         cpu->a, cpu->x, cpu->y,
         cpu->cycleCounter);

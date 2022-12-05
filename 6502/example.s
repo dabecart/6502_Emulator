@@ -13,25 +13,30 @@ program_start:
 
 	; Init the LCD Module
 	lda #%0010000	; Start configuration for 4 bit mode (this will get in 8bit mode)
-	jsr lcd_instruction
+	; Send directly, as it is 8 bit mode.
+	sta PORTB
+	ora #%00000100	; Set ENABLE high
+	sta PORTB
+	and #%11111011	; Set ENABLE low
+	sta PORTB
 
 	lda #%0010000	; 4 bit mode, display is 8x5 pixels
-	jsr lcd_instruction
+	jsr lcd_instruction ; This instruction only works for 4 bit mode.
 
 	lda #%1000000
-	jsr lcd_instruction
+	jsr lcd_instruction_nowait
 
 	lda #%0000000	; Display ON, cursor ON and blinking cursor OFF
 	jsr lcd_instruction
 
 	lda #%1110000
-	jsr lcd_instruction
+	jsr lcd_instruction_nowait
 
 	lda #%0000000	; Increment register by one and shift cursor to the right
 	jsr lcd_instruction
 
 	lda #%0110000
-	jsr lcd_instruction
+	jsr lcd_instruction_nowait
 
 	ldy #%00110000	; Number 0 will be loaded
 
@@ -53,24 +58,25 @@ loop:
 message: .asciiz "Hola Laura!"
 
 send_char:
+	pha
 	; Send the first 4 bits of the letter
 	and #$F0		; Fetch the first 4 bits
 	ror				; Rotate A one to the right
 
-	jsr lcd_data
+	ora #$01		; Add the 1 from RS signal
+	jsr lcd_instruction
 
+	pla
 	; Send the next 4 bits of the letter
-	tya
 	and #$0F		; Fetch the last 4 bits
 	rol				; Rotate A three to the left
 	rol
 	rol
 
-	jsr lcd_data
+	ora #$01		; Add the 1 from RS signal
+	jsr lcd_instruction_nowait
 	rts
 
-lcd_data:
-	ora #$01		; Add the 1 from RS signal
 lcd_instruction:
 	jsr lcd_wait
 lcd_instruction_nowait:
