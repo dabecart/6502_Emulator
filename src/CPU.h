@@ -14,7 +14,7 @@ typedef std::vector<AddressPin> AddressList;
 
 class Chip {
     public:
-    Chip(const string chipName, uint8_t pinCount = 0, uint64_t IO = 0);
+    Chip(const string chipName, uint8_t pinCount = 0, uint64_t IO = 0, uint64_t defaultPinoutSignal = 0, bool interruptIfISR = true);
 
     string chipName;
 
@@ -35,6 +35,11 @@ class Chip {
     uint8_t getByte(uint8_t LSB_pin, uint8_t MSB_pin);
     void setIOByte(uint8_t LSB_pin, uint8_t MSB_pin, uint8_t IO_data);
 
+    bool interruptIfISR = true;
+    void setPinLevelFromIRQ(uint8_t pinNumber, bool level);
+    bool getPinLevelFromIRQ(uint8_t pinNumber);
+    void launchIRQ();
+
     void run();
     void runChildren();
 
@@ -46,6 +51,8 @@ class Chip {
     // Used to process other stuff that are not chips, but still can be considered children. For example, the 
     // ROM and RAM of the CPU.
     virtual void postProcess() = 0;
+
+    virtual void processIRQ() = 0;
 
     private:
     uint64_t pinoutSignals = 0; // Logic levels of the pins.
@@ -62,6 +69,8 @@ class Chip {
 class CPU : public Chip{
 
     #define CPU_DATA_BUS 33 //Goes from 33 (D0) to 26 (D7)
+    #define CPU_IRQB 4
+    #define CPU_NMIB 6
 
     public:
     CPU();
@@ -77,7 +86,7 @@ class CPU : public Chip{
     bool c = 0; // Carry            1 = carry
 
     uint8_t x = 0, y = 0, a = 0;
-    uint16_t stackPointer;
+    uint16_t stackPointer = 0xFF;
 
     uint32_t cycleCounter = 0;
 
@@ -102,9 +111,13 @@ class CPU : public Chip{
 
     void process() override;
     void postProcess() override;
+    void processIRQ() override;
 
     void pushToStack(uint8_t);
     uint8_t pullFromStack();
+
+    uint8_t getStatusRegister();
+    void setStatusRegister(uint8_t);
 
     private:
     uint8_t ROM[ROM_SIZE];

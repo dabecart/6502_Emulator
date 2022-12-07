@@ -9,7 +9,8 @@
                 "-g",
                 "${fileDirname}/**.cpp",
                 "-o",
-                "${fileDirname}\\${fileBasenameNoExtension}.exe"
+                "${fileDirname}\\${fileBasenameNoExtension}.exe",
+                "--warn-no-trigraphs"
             ],
             "options": {
                 "cwd": "${fileDirname}"

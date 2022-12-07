@@ -63,7 +63,7 @@ void INC(Instruction* instr, CPU* cpu){
         break;
 
     case ABSOLUTE:
-    // TODO: substitute with r_w = false and update children.
+        // TODO: substitute with r_w = false and update children.
         cpu->writeRAM(instr->args, result = cpu->readRAM(instr->args)+1);
         break;
 
@@ -249,6 +249,14 @@ void ROR(Instruction* instr, CPU* cpu){
     cpu->z = cpu->a == 0;
 }
 
+void RTI(Instruction* instr, CPU* cpu){
+    instr->name = "rti";
+
+    cpu->setStatusRegister(cpu->pullFromStack());
+    cpu->pc = cpu->pullFromStack() | (cpu->pullFromStack()<<8);
+    cpu->pc--;  // Substract the byte that will later be added at the end of the fetchInstruction() function
+}
+
 void RTS(Instruction* instr, CPU* cpu){
     instr->name = "rts";
     uint16_t returnAdd = cpu->pullFromStack() | (cpu->pullFromStack()<<8);
@@ -396,6 +404,8 @@ const Instruction Instruction::INSTRUCTIONS[] = {
     
     Instruction(ROR, 0x6a, ACCUMULATOR, 1, 2),
     
+    Instruction(RTI, 0x40, IMPLIED, 1, 6),
+
     Instruction(RTS, 0x60, IMPLIED, 1, 6),
     
     Instruction(STA, 0x8D, ABSOLUTE, 3, 4),
@@ -435,9 +445,12 @@ uint16_t parseWord(uint32_t romRead){
 }
 
 void Instruction::fetchInstruction(CPU *cpu){
+    // The CPU only listens when the last instruction has been fully processed.
+    cpu->processIRQ();
+
     if(!cpu->expectsData){
         cout << endl;
-        cout << std::hex << "PC: " << cpu->pc << "\t";
+        cout << "PC: " << int_to_hex(cpu->pc) << "\t";
         cpu->r_wb = true;
         cpu->addressBus = cpu->pc;
         nextInstructionCycleIncrease = 0;
@@ -564,17 +577,6 @@ void Instruction::fetchInstruction(CPU *cpu){
     cpu->expectsData = false;
 }
 
-template< typename T >
-std::string int_to_hex( T i ) {
-  char hexString[20];
-  std::string format = "$";
-  if(sizeof(T) == 1) format += "%02X";
-  else if(sizeof(T) == 2) format += "%04X";
-  else format += "%X";
-  sprintf(hexString, format.c_str(), i);
-  return std::string(hexString);
-}
-
 void Instruction::printDecodedInstruction(CPU* cpu){
     std::string strArgs = "";
     switch (addressingMode){
@@ -629,7 +631,7 @@ void Instruction::printDecodedInstruction(CPU* cpu){
     if(tempSubroutineJumpCount!=subroutineJumps) tempSubroutineJumpCount = subroutineJumps;
 
     char msg[60];
-    std::sprintf(msg, "n=%d v=%d b=%d d=%d i=%d z=%d c=%d  a=%02X x=%02X y=%02X cycle=%d  ", 
+    std::sprintf(msg, "n=%d v=%d b=%d d=%d i=%d z=%d c=%d  a=%02X x=%02X y=%02X cycle=%d\t", 
         cpu->n, cpu->v, cpu->b, cpu->d, cpu->i, cpu->z, cpu->c, 
         cpu->a, cpu->x, cpu->y,
         cpu->cycleCounter);

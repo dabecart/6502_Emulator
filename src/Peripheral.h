@@ -13,6 +13,7 @@ class Peripheral : public Chip{
 
     void process() override;
     // postProcess() will be handled but the abstracting classes.
+    // processIRQ()  same...
 
     protected:
     virtual void updatePeripheral() = 0;
@@ -36,10 +37,34 @@ class VIA : public Peripheral {
     uint16_t regConnection;
 
     private:
-    uint8_t dataDirectionRegisterB = 0; // DDRB
-    uint8_t dataDirectionRegisterA = 0; // DDRA
+    uint8_t dataDirectionRegisterB = 0; // DDRB Reg 2
+    uint8_t dataDirectionRegisterA = 0; // DDRA Reg 3
+
+    //uint8_t peripheralControlRegister = 0;  // PCR Reg C
+    uint8_t cb2_control = 0, ca2_control = 0;
+    bool cb1_control = false, ca1_control = false;  // 0 = Negative active edge, 1 = Positive active edge
+
+    uint8_t interruptFlagRegister = 0;      // IFR Reg D
+
+    // Stores which interrupt sources are enable. 1=Enable.
+    // 7->IRQ, 6->Timer1, 5->Timer2, 4->CB1, 3->CB2, 2->Shift Reg, 1->CA1, 0->CA2
+    #define VIA_IRQ_BITPOS 7
+    #define VIA_TIMER1_BITPOS 6
+    #define VIA_TIMER2_BITPOS 5
+    #define VIA_CB1_BITPOS 4
+    #define VIA_CB2_BITPOS 3
+    #define VIA_SHIFT_REG_BITPOS 2
+    #define VIA_CA1_BITPOS 1
+    #define VIA_CA2_BITPOS 0
+    uint8_t interruptEnableRegister = 0;    // IER Reg E
+
+    // Because they do the same in different lines, this is put in a function to be called twice.
+    void setCB2andCA2Lines(bool isCB2, uint8_t code /*From 0 to 7*/);
+    void handleCB2andCA2Lines(bool isCB2, bool level, bool &launchIRQ);
+
     void updatePeripheral() override;
     void postProcess() override;
+    void processIRQ() override;
 };
 
 typedef struct{
@@ -68,7 +93,7 @@ class LCD : public Chip{
     bool n = 0;     // Number of display lines. N=1->2 lines. N=0->1 line.
     bool f = 0;     // Character font. F=1->5x10 dots. F=0->5x8 dots.
 
-    bool BF = 0;    // Busy flag
+    bool BF = 0;    // Busy flag. 1=Busy
 
     // First line goes from AC = 0x00 to 0x27, second line from 0x40 to 0x67. Total of 80 chars.
     uint8_t cursorAddress = 0;  // Where the cursor is located. 7 bit long.
@@ -78,10 +103,30 @@ class LCD : public Chip{
 
     void process() override;
     void postProcess() override;
+    void processIRQ() override;
     void clearDisplay();
     void recalculateDisplayedText();
     void fetchDataFromVIA(LCD_Connection &data);
     void printDisplay();
+};
+
+typedef struct{
+    char symbol;
+    uint8_t scanCode;
+}Key;
+
+class Keyboard{
+    public:
+    Keyboard(Chip *connectedToChip, uint8_t pinConnections[8], uint8_t IRQ);
+
+    Chip *parent;
+    uint8_t pinConnections[8];
+    uint8_t IRQ_pin;
+
+    void pressKey(char c);
+    void releaseKey(char c);
+    void sendScanCode(uint8_t scanCode);
+
 };
 
 #endif

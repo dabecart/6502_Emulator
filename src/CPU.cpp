@@ -1,9 +1,11 @@
 #include "CPU.h"
 
-Chip::Chip(const string chipName, uint8_t pinCount, uint64_t IO){
+Chip::Chip(const string chipName, uint8_t pinCount, uint64_t IO, uint64_t defaultPinoutSignal, bool irq){
     this->pinCount = pinCount;
     this->IO = IO;
     this->chipName = chipName;
+    this->pinoutSignals = defaultPinoutSignal;
+    this->interruptIfISR = irq;
 }
 
 void Chip::addChild(Chip* chip){
@@ -22,25 +24,22 @@ void Chip::setPinLevel(uint8_t pinNumber, bool level){
     if((expectsData || updateChildren) && !getBitAt(IO, pinNumber)) throwException("Pin %d of %s is an OUTPUT, not input\n",pinNumber, chipName);
     if(getBitAt(setPins, pinNumber)) throwException("Pin %d of %s has a value not read", pinNumber, chipName);
 
-    uint64_t mask = 1<<pinNumber;
-    setPins |= mask;        // Sets the pin as set. It will store a value to be read.
-    pinoutSignals &= ~mask; // Clears the bit value
-    if(level) pinoutSignals |= level<<pinNumber;  // Sets it on the level required.
+    setBitAt(setPins, pinNumber, true); // Sets the pin as set. It will store a value to be read.
+    setBitAt(pinoutSignals, pinNumber, level); // Sets it on the level required.
 }
 
 void Chip::setPinIO(uint8_t pinNumber, bool i_o){
     if(!pinNumber || pinNumber > pinCount) throwException("Pin %d of %s not valid. Cannot set IO\n", pinNumber, chipName);
 
-    uint64_t mask = ~(1<<pinNumber);
-    IO &= mask;  // Clears the bit value
-    if(i_o) IO |= i_o<<pinNumber;  // Sets it on the level required.
+    setBitAt(IO, pinNumber, i_o);
+    setBitAt(setPins, pinNumber, false);
 }
 
 bool Chip::getPinLevel(uint8_t pinNumber){
     if(!pinNumber || pinNumber > pinCount) throwException("Pin %d of %s not valid. Cannot get pin level\n", pinNumber, chipName);
 
     // Multiple reads can be allowed, so the setPins variable just gets cleared.
-    setPins &= ~(1<<pinNumber);
+    setBitAt(setPins, pinNumber, false);
     return getBitAt(pinoutSignals, pinNumber);
 }
 
@@ -50,7 +49,7 @@ uint8_t Chip::getByte(uint8_t LSB, uint8_t MSB){
     uint8_t differenceBetweenLSBandMSB = 0;
     if(MSB>LSB) differenceBetweenLSBandMSB = MSB-LSB;
     else differenceBetweenLSBandMSB = LSB-MSB;
-    if(differenceBetweenLSBandMSB > 7) throwException("%s LSB-MSB > 7. Cannot set IOByte", chipName);
+    if(differenceBetweenLSBandMSB > 7) throwException("%s LSB-MSB > 7. Cannot getByte", chipName);
 
     uint8_t result = 0;
     uint8_t pos = LSB;
@@ -84,6 +83,22 @@ void Chip::setIOByte(uint8_t LSB, uint8_t MSB, uint8_t IO_data){
     setPinIO(pos, getBitAt(IO_data, differenceBetweenLSBandMSB));
 }
 
+void Chip::setPinLevelFromIRQ(uint8_t pinNumber, bool level){
+    updateChildren = true;
+    setPinLevel(pinNumber, level);
+}
+
+bool Chip::getPinLevelFromIRQ(uint8_t pinNumber){
+    updateChildren = true;
+    return getPinLevel(pinNumber);
+}
+
+void Chip::launchIRQ(){
+    if(interruptIfISR){
+        processIRQ();
+    }
+}
+
 void Chip::run(){
     expectsData = false;
     updateChildren = false;
@@ -102,8 +117,7 @@ void Chip::runChildren(){
     }
 }
 
-CPU::CPU() : Chip("65C02", 40, 0){
-    //this->IO = 0x0F<<CPU_DATA_BUS;
+CPU::CPU() : Chip("65C02", 40, 1<<CPU_IRQB | 1<<CPU_NMIB, 1<<CPU_IRQB | 1<<CPU_NMIB, false){
     RAM_address = {{15,0}, {14,0}};
     ROM_address = {{15,1}, {14,1}, {13,1}};
 }
@@ -198,6 +212,43 @@ void CPU::postProcess(){
     RAMListener();
     ROMListener();
 }
+
+void CPU::processIRQ(){
+    if(!i && !getPinLevel(CPU_IRQB)){
+        i = 1;  // Disable interrupts until handled correctly
+        pushToStack(pc>>8);
+        pushToStack(pc);
+        pushToStack(getStatusRegister());
+
+        pc = readROM(0xFFFE) | (readROM(0xFFFF)<<8); 
+    }
+    if(!getPinLevel(CPU_NMIB)){
+        i = 1;  // Disable interrupts until handled correctly
+        pushToStack(pc>>8);
+        pushToStack(pc);
+        pushToStack(getStatusRegister());
+
+        pc = readROM(0xFFFA) | (readROM(0xFFFB)<<8); 
+    }
+}
+
+uint8_t CPU::getStatusRegister(){
+    bool statReg[7] = {n,v,b,d,i,z,c};
+    uint8_t statInt = 0;
+    for(uint8_t i = 0; i < 7; i++) statInt |= statReg[i]<<i;
+    return statInt;
+}
+
+void CPU::setStatusRegister(uint8_t st){
+    n = getBitAt(st, 0);
+    v = getBitAt(st, 1);
+    b = getBitAt(st, 2);
+    d = getBitAt(st, 3);
+    i = getBitAt(st, 4);
+    z = getBitAt(st, 5);
+    c = getBitAt(st, 6);
+}
+
 
 // This method can be found in instruction.cpp
 /*void CPU::process(){
