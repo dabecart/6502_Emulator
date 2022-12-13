@@ -107,7 +107,13 @@ void Chip::run(){
         // This will ensure that children get the data and furthermore, answer the call from the parent.
         postProcess();
         runChildren();
-        if(expectsData) process();
+        if(expectsData){
+            process();
+            if(updateChildren){ // Specially made for INC operation
+                postProcess();
+                runChildren();
+            }
+        }
     }
 }
 
@@ -175,8 +181,11 @@ void CPU::RAMListener(){
     }
     if(r_wb){
         dataBus = readRAM(addressBus);
+        cout << "RAM: Read " << int_to_hex(dataBus) << " from " << int_to_hex(addressBus);
+        cout << "\n\t\t";
     }else{
         writeRAM(addressBus, dataBus);
+        cout << "RAM: Write " << int_to_hex(dataBus) << " to " << int_to_hex(addressBus);
     }
 }
 
@@ -184,7 +193,14 @@ void CPU::ROMListener(){
     for(AddressPin ad : ROM_address){
         if(getBitAt(addressBus, ad.pinNumber) != ad.value) return;
     }
-    dataBus = readROM(addressBus);
+    if(r_wb){
+        dataBus = readROM(addressBus);
+        cout << "ROM: Read " << int_to_hex(dataBus) << " from " << int_to_hex(addressBus);
+        cout << "\n\t\t";
+    }else{
+        throwException("Something tried to write to ROM!");
+    }
+    
 }
 
 void CPU::pushToStack(uint8_t data){
@@ -221,6 +237,7 @@ void CPU::processIRQ(){
         pushToStack(getStatusRegister());
 
         pc = readROM(0xFFFE) | (readROM(0xFFFF)<<8); 
+        cout << "\n **************** IRQ Routine ***************";
     }
     if(!getPinLevel(CPU_NMIB)){
         i = 1;  // Disable interrupts until handled correctly

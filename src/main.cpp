@@ -18,16 +18,19 @@ int main(){
     cpu.addChild(&via);
     via.addChild(&lcd);
 
+    keyboard.setKeySequence("/");
+
+    Instruction::sortInstructions();
     cpu.reset();
 
     std::cout << "Ready\n";
 
-    for(;;){
-        if(cpu.cycleCounter > 3600){
-            keyboard.pressKey('a');
-        }
+    while(!keyboard.keySequenceFinished()){
+        uint64_t time = cpu.cycleCounter*1000/CLOCK_SPEED;
+
+        keyboard.typeKeySequence(time, 5);
         cpu.run();
-        std::this_thread::sleep_for(std::chrono::microseconds(1));
+        std::this_thread::sleep_for(std::chrono::nanoseconds(500));
     }
 
     std::cout << "Bye!";

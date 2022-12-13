@@ -16,6 +16,10 @@ using namespace std;
 #define RAM_SIZE 16384
 #define RAM_START 0x0000
 
+#define CLOCK_SPEED 1e6
+
+//#define LCD_SIMULATE_BUSY_STATE 
+
 inline void throwException(const char format[], ...){
     cout << endl;
     char msg[200];

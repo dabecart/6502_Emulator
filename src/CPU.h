@@ -88,7 +88,7 @@ class CPU : public Chip{
     uint8_t x = 0, y = 0, a = 0;
     uint16_t stackPointer = 0xFF;
 
-    uint32_t cycleCounter = 0;
+    uint64_t cycleCounter = 0;
 
     void reset();
 

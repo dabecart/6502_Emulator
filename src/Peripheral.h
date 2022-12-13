@@ -26,8 +26,8 @@ class VIA : public Peripheral {
 
     #define VIA_PA_PIN 2    // PA0 pin, total of eight, from PA0 to PA7.
     #define VIA_PB_PIN 10   // Pb0 pin, total of eight, from PB0 to PB7
-    #define VIA_CA1 39  // Interrupt pins
-    #define VIA_CA2 40
+    #define VIA_CA1 40  // Interrupt pins
+    #define VIA_CA2 39
     #define VIA_CB1 18
     #define VIA_CB2 19
 
@@ -116,16 +116,27 @@ typedef struct{
 }Key;
 
 class Keyboard{
+    #define KEYBOARD_INTERKEY_TIME_MS 2
+    #define KEYBOARD_RELEASE_TIME_MS 2
+    #define KEYBOARD_INTERVAL_F0_KEYCODE 2 // Interval between 0xF0 and the keyscan released
+
     public:
     Keyboard(Chip *connectedToChip, uint8_t pinConnections[8], uint8_t IRQ);
+
+    string keySequence;
+    uint8_t currentKeyIndex = 0; // Index of last character sent of keySequence. 
 
     Chip *parent;
     uint8_t pinConnections[8];
     uint8_t IRQ_pin;
 
+    void setKeySequence(string str);
     void pressKey(char c);
-    void releaseKey(char c);
     void sendScanCode(uint8_t scanCode);
+
+    void typeKeySequence(uint64_t time_ms, uint64_t startTypingTime);
+
+    bool keySequenceFinished();
 
 };
 

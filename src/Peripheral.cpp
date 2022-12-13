@@ -59,6 +59,10 @@ void VIA::updatePeripheral(){
         setBitAt(interruptFlagRegister, VIA_CB1_BITPOS, false);
         // In case of CB2, it depends if it is selected as independent.
         if(cb2_control != 1 && cb2_control != 3) setBitAt(interruptFlagRegister, VIA_CB2_BITPOS, false);
+        if(interruptFlagRegister&0x7F == 0){
+            interruptFlagRegister = 0;
+            parent->setPinLevel(CPU_IRQB, true);
+        }
         break;
     }
 
@@ -77,10 +81,14 @@ void VIA::updatePeripheral(){
             }
             updateChildren = true;
         }
-        // When read or write to ORB, CA1 always gets cleared.
+        // When read or write to ORA, CA1 always gets cleared.
         setBitAt(interruptFlagRegister, VIA_CA1_BITPOS, false);
         // In case of CA2, it depends if it is selected as independent.
         if(ca2_control != 1 && ca2_control != 3) setBitAt(interruptFlagRegister, VIA_CA2_BITPOS, false);
+        if((interruptFlagRegister&0x7F) == 0){
+            interruptFlagRegister = 0;
+            parent->setPinLevel(CPU_IRQB, true);
+        }
         break;
     }
     
@@ -293,7 +301,9 @@ void LCD::process(){
 
     if(!rs && rw){    // Read the busy flag and address vector.
         if(dl){ // 8 bit mode
+            #ifdef LCD_SIMULATE_BUSY_STATE
             BF = !BF;   //Flip BF to test
+            #endif
             for(uint8_t i = 0; i < 7; i++){
                 if(lcd_connections.DB[i] != 0){ // Because it boots up in 8 bit mode, maybe the 4 lower pins are connected (4 bit mode).
                     parent->setPinLevel(lcd_connections.DB[i], getBitAt(cursorAddress, i));
@@ -303,7 +313,9 @@ void LCD::process(){
         }else{  // 4 bit mode
             static bool firstRead = true;
             if(firstRead){  // Upper read
+                #ifdef LCD_SIMULATE_BUSY_STATE
                 BF = !BF;   //Flip BF to test
+                #endif
                 parent->setPinLevel(lcd_connections.DB[7], BF);
                 for(uint8_t i = 4; i < 7; i++){
                     parent->setPinLevel(lcd_connections.DB[i], getBitAt(cursorAddress, /*6-(i-4)*/ 10-i));
@@ -503,6 +515,10 @@ Keyboard::Keyboard(Chip *cc, uint8_t pinCons[8], uint8_t irq){
     this->IRQ_pin = irq;
 }
 
+void Keyboard::setKeySequence(string str){
+    this->keySequence = str;
+}
+
 void Keyboard::pressKey(char c){
     uint8_t keyCode = 0;
     for(keyCode = 0; keyCode < 0xFF; keyCode++){
@@ -519,7 +535,40 @@ void Keyboard::sendScanCode(uint8_t scanCode){
     parent->launchIRQ();
 }
 
-void Keyboard::releaseKey(char c){
-    sendScanCode(0xF0);
+void Keyboard::typeKeySequence(uint64_t time_ms, uint64_t startTypingTime){
+    static uint32_t triggerTime = startTypingTime;
+    if(currentKeyIndex >= keySequence.length() || time_ms < triggerTime) return;
 
+    // 0 = Pressing, 1 = Send 0xF0, 2 = Send released keyscan 
+    static uint8_t keyProcessIndex = 0;
+
+    switch (keyProcessIndex) {
+    case 0:{
+        pressKey(keySequence[currentKeyIndex]);
+        triggerTime += KEYBOARD_RELEASE_TIME_MS;
+        cout << "Keyboard press: " << keySequence[currentKeyIndex];
+        break;
+    }
+    case 1:{
+        sendScanCode(0xF0);
+        triggerTime += KEYBOARD_INTERVAL_F0_KEYCODE;
+        cout << "Keyboard release: 0xF0";
+        break;
+    }
+    case 2:{
+        pressKey(keySequence[currentKeyIndex++]);
+        triggerTime += KEYBOARD_INTERKEY_TIME_MS;
+        cout << "Keyboard release: " << keySequence[currentKeyIndex-1];
+        break;
+    }
+    
+    default:
+        break;
+    }
+    cout << "\n\t\t";
+    keyProcessIndex = (++keyProcessIndex)%3;        
+}
+
+bool Keyboard::keySequenceFinished(){
+    return currentKeyIndex >= keySequence.length();
 }

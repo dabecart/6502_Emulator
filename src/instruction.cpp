@@ -9,6 +9,30 @@ void throwAddressingModeError(Instruction* instr){
     throw std::invalid_argument(msg);
 }
 
+void ADC(Instruction* instr, CPU* cpu){
+    instr->name = "adc";
+
+    uint8_t prev_a = cpu->a;
+    int8_t a_signed = 0, arg_signed = 0;
+    memcpy(&a_signed, &cpu->a, 1);
+    memcpy(&arg_signed, &instr->args, 1);
+    int8_t sum = a_signed + arg_signed + cpu->c;
+
+    memcpy(&cpu->a, &sum, 1);
+    // FLAGS:
+    // Negative: Set if MSB of result is 1.
+    cpu->n = cpu->a>>7;
+    // Overflow: Set if signed overflow -> positive + positive = negative or negative + negative = positive
+    bool a_pos = a_signed>0;
+    bool arg_pos = arg_signed>0;
+    bool sum_pos = sum>0;
+    cpu->v = (a_pos && arg_pos && !sum_pos) || (!a_pos && !arg_pos && sum_pos);
+    // Zero: Set if value is 0
+    cpu->z = cpu->a==0;
+    // Carry: Set if unsigned overflow
+    cpu->c = prev_a>cpu->a;
+}
+
 void AND(Instruction* instr, CPU* cpu){
     instr->name = "and";
 
@@ -20,6 +44,24 @@ void AND(Instruction* instr, CPU* cpu){
     cpu->z = cpu->a==0;
 }
 
+// Branch if n = 1 (negative number)
+void BMI(Instruction *instr, CPU* cpu){
+    instr->name = "bmi";
+    
+    uint8_t arg = instr->args;
+    int8_t jumpDistance;
+    memcpy(&jumpDistance, &arg, 1);
+
+    if(cpu->n){
+        uint16_t temp = cpu->pc;
+        cpu->pc += jumpDistance;
+        // If branch is taken, it takes a cycle more.
+        instr->nextInstructionCycleIncrease++;
+        // Add one cycle more if branch taken crosses boundary.
+        if(temp>>8 != (cpu->pc+2)>>8) instr->nextInstructionCycleIncrease++;
+    }
+}
+
 // Branch iz z = 1
 void BEQ(Instruction *instr, CPU* cpu){
     instr->name = "beq";
@@ -29,6 +71,24 @@ void BEQ(Instruction *instr, CPU* cpu){
     memcpy(&jumpDistance, &arg, 1);
 
     if(cpu->z){
+        uint16_t temp = cpu->pc;
+        cpu->pc += jumpDistance;
+        // If branch is taken, it takes a cycle more.
+        instr->nextInstructionCycleIncrease++;
+        // Add one cycle more if branch taken crosses boundary.
+        if(temp>>8 != (cpu->pc+2)>>8) instr->nextInstructionCycleIncrease++;
+    }
+}
+
+// Branch if n = 0 (positive number)
+void BPL(Instruction *instr, CPU* cpu){
+    instr->name = "bpl";
+    
+    uint8_t arg = instr->args;
+    int8_t jumpDistance;
+    memcpy(&jumpDistance, &arg, 1);
+
+    if(!cpu->n){
         uint16_t temp = cpu->pc;
         cpu->pc += jumpDistance;
         // If branch is taken, it takes a cycle more.
@@ -53,23 +113,57 @@ void BNE(Instruction *instr, CPU* cpu){
     }
 }
 
+void CLC(Instruction* instr, CPU* cpu){
+    instr->name = "clc";
+    cpu->c = false;
+}
+
+void CLI(Instruction* instr, CPU* cpu){
+    instr->name = "cli";
+    cpu->i = false;
+}
+
+void CMP(Instruction* instr, CPU* cpu){
+    instr->name = "cmp";
+
+    uint8_t operand;
+    if(instr->addressingMode == IMMEDIATE){
+        operand = instr->args;
+    }else{
+        operand = cpu->getDataBus();
+    }
+    uint8_t result = cpu->a - operand;
+
+    // FLAGS:
+    cpu->n = result>>7;
+    cpu->z = result==0;
+    // Carry set if no borrow required, aka. accumulator bigger or same as operand.
+    cpu->c = cpu->a >= operand;
+}
+
+void EOR(Instruction* instr, CPU* cpu){
+    instr->name = "eor";
+
+    cpu->a ^= instr->args;
+    // FLAGS:
+    // Set if MSB of result is 1.
+    cpu->n = cpu->a>>7;
+    // Set if value is 0
+    cpu->z = cpu->a==0;
+}
+
 void INC(Instruction* instr, CPU* cpu){
     instr->name = "inc";
 
     uint8_t result = 0;
-    switch (instr->addressingMode) {
-    case ACCUMULATOR:
+    if(instr->addressingMode == IMMEDIATE){
         result = ++cpu->a;
-        break;
-
-    case ABSOLUTE:
-        // TODO: substitute with r_w = false and update children.
-        cpu->writeRAM(instr->args, result = cpu->readRAM(instr->args)+1);
-        break;
-
-    default:
-        throwAddressingModeError(instr);
-        break;
+    }else{
+        result = cpu->getDataBus() + 1;
+        cpu->r_wb = false;
+        cpu->addressBus = instr->args;
+        cpu->writeDataBus(result);
+        cpu->updateChildren = true;
     }
     
     // FLAGS:
@@ -134,7 +228,12 @@ void JSR(Instruction* instr, CPU* cpu){
 void LDA(Instruction* instr, CPU* cpu){
     instr->name = "lda";
 
-    cpu->a = instr->args;
+    if(instr->addressingMode == IMMEDIATE){
+        cpu->a = instr->args;
+    }else{
+        cpu->a = cpu->getDataBus();
+    }
+    
     // FLAGS:
     // Set if MSB of loaded value is 1.
     cpu->n = instr->args>>7;
@@ -145,7 +244,11 @@ void LDA(Instruction* instr, CPU* cpu){
 void LDX(Instruction* instr, CPU* cpu){
     instr->name = "ldx";
 
-    cpu->x = instr->args;
+    if(instr->addressingMode == IMMEDIATE){
+        cpu->x = instr->args;
+    }else{
+        cpu->x = cpu->getDataBus();
+    }
     // FLAGS:
     // Set if MSB of loaded value is 1.
     cpu->n = instr->args>>7;
@@ -156,7 +259,11 @@ void LDX(Instruction* instr, CPU* cpu){
 void LDY(Instruction* instr, CPU* cpu){
     instr->name = "ldy";
 
-    cpu->y = instr->args;
+    if(instr->addressingMode == IMMEDIATE){
+        cpu->y = instr->args;
+    }else{
+        cpu->y = cpu->getDataBus();
+    }
     // FLAGS:
     // Set if MSB of loaded value is 1.
     cpu->n = instr->args>>7;
@@ -269,10 +376,14 @@ void RTS(Instruction* instr, CPU* cpu){
     instr->subroutineJumps--;
 }
 
+void SEI(Instruction* instr, CPU* cpu){
+    instr->name = "sei";
+    cpu->i = true;
+}
+
 void STA(Instruction* instr, CPU* cpu){
     instr->name = "sta";
 
-    cpu->dataBusWritten = true;
     cpu->r_wb = false;
     cpu->addressBus = instr->args;
     cpu->writeDataBus(cpu->a);
@@ -282,7 +393,6 @@ void STA(Instruction* instr, CPU* cpu){
 void STX(Instruction* instr, CPU* cpu){
     instr->name = "stx";
 
-    cpu->dataBusWritten = true;
     cpu->r_wb = false;
     cpu->addressBus = instr->args;
     cpu->writeDataBus(cpu->x);
@@ -292,7 +402,6 @@ void STX(Instruction* instr, CPU* cpu){
 void STY(Instruction* instr, CPU* cpu){
     instr->name = "sty";
 
-    cpu->dataBusWritten = true;
     cpu->r_wb = false;
     cpu->addressBus = instr->args;
     cpu->writeDataBus(cpu->y);
@@ -360,15 +469,35 @@ void TYA(Instruction* instr, CPU* cpu){
     instr->name = "tya";
 }
 
-const Instruction Instruction::INSTRUCTIONS[] = {
+vector<Instruction> Instruction::INSTRUCTIONS = {
+    Instruction(ADC, 0x69, IMMEDIATE, 2, 2),
+    Instruction(ADC, 0x6D, ABSOLUTE, 3, 4, true),
+    Instruction(ADC, 0x65, DP, 2, 3, true),
+
     Instruction(AND, 0x29, IMMEDIATE, 2, 2),
+
+    Instruction(BMI, 0x30, IMMEDIATE, 2, 2),
 
     Instruction(BEQ, 0xF0, IMMEDIATE, 2, 2),
 
+    Instruction(BPL, 0x10, IMMEDIATE, 2, 2),
+
     Instruction(BNE, 0xD0, IMMEDIATE, 2, 2),
 
+    Instruction(CLC, 0x18, IMPLIED, 1, 2),
+    Instruction(CLI, 0x58, IMPLIED, 1, 2),
+
+    Instruction(CMP, 0xC9, IMMEDIATE, 2, 2),
+    Instruction(CMP, 0xCD, ABSOLUTE, 3, 4, true),
+    Instruction(CMP, 0xC5, DP, 2, 3, true),
+
+    Instruction(EOR, 0x49, IMMEDIATE, 2, 2),
+    Instruction(EOR, 0x4D, ABSOLUTE, 3, 4),
+    Instruction(EOR, 0x45, DP, 2, 3),
+
     Instruction(INC, 0x1A, ACCUMULATOR, 1, 2),
-    Instruction(INC, 0xEE, ABSOLUTE, 3, 6),
+    Instruction(INC, 0xEE, ABSOLUTE, 3, 6, true),
+    Instruction(INC, 0xE6, DP, 2, 5, true),
 
     Instruction(INX, 0xE8, IMPLIED, 1, 2),
 
@@ -378,16 +507,19 @@ const Instruction Instruction::INSTRUCTIONS[] = {
 
     Instruction(JSR, 0x20, IMMEDIATE, 3, 6), //Technically ABSOLUTE, but it works the same in this case.
     
-    Instruction(LDA, 0xA9, IMMEDIATE, 2, 2, true),
+    Instruction(LDA, 0xA9, IMMEDIATE, 2, 2),
     Instruction(LDA, 0xAD, ABSOLUTE, 3, 4, true),
+    Instruction(LDA, 0xA5, DP, 2, 3, true),
     Instruction(LDA, 0xBD, ABS_INDEXED_X, 3, 4, true),
     
-    Instruction(LDX, 0xA2, IMMEDIATE, 2, 2, true),
+    Instruction(LDX, 0xA2, IMMEDIATE, 2, 2),
     Instruction(LDX, 0xAE, ABSOLUTE, 3, 4, true),
+    Instruction(LDX, 0xA6, DP, 2, 3, true),
     Instruction(LDX, 0xBE, ABS_INDEXED_Y, 3, 4, true),
     
-    Instruction(LDY, 0xA0, IMMEDIATE, 2, 2, true),
+    Instruction(LDY, 0xA0, IMMEDIATE, 2, 2),
     Instruction(LDY, 0xAC, ABSOLUTE, 3, 4, true),
+    Instruction(LDY, 0xA4, DP, 2, 3, true),
     Instruction(LDY, 0xBC, ABS_INDEXED_X, 3, 4, true),
     
     Instruction(ORA, 0x09, IMMEDIATE, 2, 2),
@@ -407,12 +539,19 @@ const Instruction Instruction::INSTRUCTIONS[] = {
     Instruction(RTI, 0x40, IMPLIED, 1, 6),
 
     Instruction(RTS, 0x60, IMPLIED, 1, 6),
+
+    Instruction(SEI, 0x78, IMPLIED, 1, 2),
     
     Instruction(STA, 0x8D, ABSOLUTE, 3, 4),
-    
+    Instruction(STA, 0x85, DP, 2, 3),
+    Instruction(STA, 0x9D, ABS_INDEXED_X, 3, 5),
+    Instruction(STA, 0x99, ABS_INDEXED_Y, 3, 5),
+
     Instruction(STX, 0x8E, ABSOLUTE, 3, 4),
+    Instruction(STX, 0x86, DP, 2, 3),
     
     Instruction(STY, 0x8C, ABSOLUTE, 3, 4),
+    Instruction(STY, 0x84, DP, 2, 3),
     
     Instruction(TAX, 0xAA, IMPLIED, 1, 2),
     
@@ -426,6 +565,27 @@ const Instruction Instruction::INSTRUCTIONS[] = {
     
     Instruction(TYA, 0x98, IMPLIED, 1, 2),
 };
+
+void Instruction::sortInstructions(){
+    sort(INSTRUCTIONS.begin(), INSTRUCTIONS.end(), [](const Instruction &in1, const Instruction &in2){
+        return in1.opcode < in2.opcode;
+    });
+}
+
+uint8_t Instruction::findInstructionIndex(uint8_t opcode){
+    uint8_t first = 0;
+    uint8_t last = INSTRUCTIONS.size() - 1;
+    while(first <= last){
+        uint8_t center = (first+last)/2;
+        uint8_t currentOPCode = INSTRUCTIONS[center].opcode;
+        if(currentOPCode == opcode) return center;
+        
+        if(currentOPCode > opcode) last = center - 1;
+        else first = center + 1;
+    }
+    throwException("Instruction %02X not supported!", opcode);
+    return -1;
+}
 
 Instruction::Instruction(std::function<void(Instruction*, CPU*)> function, uint8_t opcode, uint8_t addressingMode, uint8_t byteLength, uint8_t numberOfCycles, bool needsInput){
     this->function = function;
@@ -448,6 +608,7 @@ void Instruction::fetchInstruction(CPU *cpu){
     // The CPU only listens when the last instruction has been fully processed.
     cpu->processIRQ();
 
+    // Begining of the CPU cycle
     if(!cpu->expectsData){
         cout << endl;
         cout << "PC: " << int_to_hex(cpu->pc) << "\t";
@@ -456,6 +617,8 @@ void Instruction::fetchInstruction(CPU *cpu){
         nextInstructionCycleIncrease = 0;
     }
 
+    // Loads the next three bytes from the instruction byte (included) in the same order
+    // it appears inside the ROM:  CodeOp + 1stByte + 2nd Byte
     uint32_t romRead = 0;
     for(uint8_t i = 0; i < 3; i++){
         romRead |= cpu->readROM(cpu->pc+i) << ((2-i)*8);
@@ -463,14 +626,7 @@ void Instruction::fetchInstruction(CPU *cpu){
 
     //Find the function by opcode
     uint8_t requiredOPCode = romRead>>16;
-    Instruction* instr = NULL;
-    for(Instruction i : INSTRUCTIONS){
-        if(i.opcode == requiredOPCode){
-            instr = &i;
-            break;
-        }
-    }
-    if(instr == NULL) throwException("Instruction %02X not supported!", requiredOPCode);
+    Instruction* instr = &INSTRUCTIONS[findInstructionIndex(requiredOPCode)];
 
     uint8_t addrMode = instr->addressingMode;
     bool needsSubsequentProcess = !cpu->expectsData && instr->needsInput && addrMode!=IMMEDIATE;
@@ -480,6 +636,19 @@ void Instruction::fetchInstruction(CPU *cpu){
         switch (addrMode) {
             case ABSOLUTE:{
                 cpu->addressBus = args1;
+                break;
+            }
+
+            case DP:{
+                // Load the byte following the CodeOp.
+                cpu->addressBus = parseByte(romRead);
+                break;
+            }
+
+            case DP_INDIRECT:{
+                uint8_t dp = parseByte(romRead);
+                uint16_t direction = cpu->readRAM(dp) | (cpu->readRAM(dp+1) << 8);
+                cpu->addressBus = direction;
                 break;
             }
 
@@ -527,31 +696,23 @@ void Instruction::fetchInstruction(CPU *cpu){
         break;
     }
 
-
     case ABSOLUTE:{
-        if(instr->needsInput){
-            instrArguments = cpu->getDataBus(); // i.e. LDA
-        }else{
-            instrArguments = parseWord(romRead); // i.e. STA
-        }
+        instrArguments = parseWord(romRead); // i.e. STA
+        break;
+    }
+
+    case DP:{
+        instrArguments = parseByte(romRead);
         break;
     }
 
     case ABS_INDEXED_X:{
-        if(instr->needsInput){
-            instrArguments = cpu->getDataBus();
-        }else{
-            instrArguments = parseWord(romRead) + cpu->x;
-        }
+        instrArguments = parseWord(romRead) + cpu->x;
         break;
     }
 
     case ABS_INDEXED_Y:{
-        if(instr->needsInput){
-            instrArguments = cpu->getDataBus();
-        }else{
-            instrArguments = parseWord(romRead) + cpu->y;
-        }
+        instrArguments = parseWord(romRead) + cpu->y;
         break;
     }
 
@@ -568,13 +729,12 @@ void Instruction::fetchInstruction(CPU *cpu){
     //Execute the function
     instr->function(instr, cpu);
     
-    instr->args = parseWord(romRead);   // To format correctly the debug log
+    instr->args = instrArguments;   // To format correctly the debug log
     instr->printDecodedInstruction(cpu);
 
     //Finalize updating the cpu
     cpu->pc += instr->byteLength;
     cpu->cycleCounter += nextInstructionCycleIncrease;
-    cpu->expectsData = false;
 }
 
 void Instruction::printDecodedInstruction(CPU* cpu){
@@ -593,6 +753,13 @@ void Instruction::printDecodedInstruction(CPU* cpu){
 
     case ABSOLUTE:{
         strArgs += int_to_hex(args);
+        break;
+    }
+    
+    case DP:{
+        uint8_t byteParam = args;
+        strArgs += int_to_hex(byteParam);
+        strArgs += "  ";
         break;
     }
 
@@ -636,6 +803,10 @@ void Instruction::printDecodedInstruction(CPU* cpu){
         cpu->a, cpu->x, cpu->y,
         cpu->cycleCounter);
     std::cout << msg;
+
+    if(name=="rti"){
+        cout << "\n**************** Exit IRQ ***************\n";
+    }
 }
 
 void CPU::process(){

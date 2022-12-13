@@ -27,7 +27,7 @@ start_lcd_4bit:
 	lda #%00000110	; Increment register by one and shift cursor to the right
 	jsr send_lcd_instruction
 
-	lda #%00000001	; Increment register by one and shift cursor to the right
+	lda #%00000001	; Home
 	jsr send_lcd_instruction
 
 	ldx #0
