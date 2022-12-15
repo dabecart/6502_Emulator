@@ -12,10 +12,17 @@ void throwAddressingModeError(Instruction* instr){
 void ADC(Instruction* instr, CPU* cpu){
     instr->name = "adc";
 
+    uint8_t args = 0;
+    if(instr->addressingMode == IMMEDIATE){
+        args = instr->args;
+    }else{
+        args = cpu->getDataBus();
+    }
+
     uint8_t prev_a = cpu->a;
     int8_t a_signed = 0, arg_signed = 0;
     memcpy(&a_signed, &cpu->a, 1);
-    memcpy(&arg_signed, &instr->args, 1);
+    memcpy(&arg_signed, &args, 1);
     int8_t sum = a_signed + arg_signed + cpu->c;
 
     memcpy(&cpu->a, &sum, 1);
@@ -44,6 +51,32 @@ void AND(Instruction* instr, CPU* cpu){
     cpu->z = cpu->a==0;
 }
 
+void ASL(Instruction* instr, CPU* cpu){
+    instr->name = "asl";
+
+    uint8_t result = 0;
+    if(instr->addressingMode == ACCUMULATOR){
+        cpu->c = cpu->a >> 7;
+        cpu->a = cpu->a << 1;
+        result = cpu->a;
+    }else{
+        result = cpu->getDataBus();
+        cpu->c = result << 7;
+        result = result << 1;
+
+        cpu->r_wb = false;
+        cpu->addressBus = instr->args;
+        cpu->writeDataBus(result);
+        cpu->updateChildren = true;
+    }
+    
+    // FLAGS:
+    // Negative: if top bit is 1.
+    cpu->n = result>>7;
+    // Set if value is 0
+    cpu->z = result==0;
+}
+
 // Branch if n = 1 (negative number)
 void BMI(Instruction *instr, CPU* cpu){
     instr->name = "bmi";
@@ -53,6 +86,42 @@ void BMI(Instruction *instr, CPU* cpu){
     memcpy(&jumpDistance, &arg, 1);
 
     if(cpu->n){
+        uint16_t temp = cpu->pc;
+        cpu->pc += jumpDistance;
+        // If branch is taken, it takes a cycle more.
+        instr->nextInstructionCycleIncrease++;
+        // Add one cycle more if branch taken crosses boundary.
+        if(temp>>8 != (cpu->pc+2)>>8) instr->nextInstructionCycleIncrease++;
+    }
+}
+
+// Branch iz c = 0
+void BCC(Instruction *instr, CPU* cpu){
+    instr->name = "bcc";
+    
+    uint8_t arg = instr->args;
+    int8_t jumpDistance;
+    memcpy(&jumpDistance, &arg, 1);
+
+    if(!cpu->c){
+        uint16_t temp = cpu->pc;
+        cpu->pc += jumpDistance;
+        // If branch is taken, it takes a cycle more.
+        instr->nextInstructionCycleIncrease++;
+        // Add one cycle more if branch taken crosses boundary.
+        if(temp>>8 != (cpu->pc+2)>>8) instr->nextInstructionCycleIncrease++;
+    }
+}
+
+// Branch iz c = 1
+void BCS(Instruction *instr, CPU* cpu){
+    instr->name = "bcs";
+    
+    uint8_t arg = instr->args;
+    int8_t jumpDistance;
+    memcpy(&jumpDistance, &arg, 1);
+
+    if(cpu->c){
         uint16_t temp = cpu->pc;
         cpu->pc += jumpDistance;
         // If branch is taken, it takes a cycle more.
@@ -141,6 +210,51 @@ void CMP(Instruction* instr, CPU* cpu){
     cpu->c = cpu->a >= operand;
 }
 
+void DEC(Instruction* instr, CPU* cpu){
+    instr->name = "dec";
+
+    uint8_t result = 0;
+    if(instr->addressingMode == ACCUMULATOR){
+        result = --cpu->a;
+    }else{
+        result = cpu->getDataBus() - 1;
+        cpu->r_wb = false;
+        cpu->addressBus = instr->args;
+        cpu->writeDataBus(result);
+        cpu->updateChildren = true;
+    }
+    
+    // FLAGS:
+    // Set if MSB of result is 1.
+    cpu->n = result>>7;
+    // Set if value is 0
+    cpu->z = result==0;
+}
+
+void DEX(Instruction* instr, CPU* cpu){
+    instr->name = "dex";
+
+    cpu->x--;
+
+    // FLAGS:
+    // Set if MSB of result is 1.
+    cpu->n = cpu->x>>7;
+    // Set if value is 0
+    cpu->z = cpu->x==0;
+}
+
+void DEY(Instruction* instr, CPU* cpu){
+    instr->name = "dey";
+
+    cpu->y--;
+
+    // FLAGS:
+    // Set if MSB of result is 1.
+    cpu->n = cpu->y>>7;
+    // Set if value is 0
+    cpu->z = cpu->y==0;
+}
+
 void EOR(Instruction* instr, CPU* cpu){
     instr->name = "eor";
 
@@ -156,7 +270,7 @@ void INC(Instruction* instr, CPU* cpu){
     instr->name = "inc";
 
     uint8_t result = 0;
-    if(instr->addressingMode == IMMEDIATE){
+    if(instr->addressingMode == ACCUMULATOR){
         result = ++cpu->a;
     }else{
         result = cpu->getDataBus() + 1;
@@ -271,6 +385,32 @@ void LDY(Instruction* instr, CPU* cpu){
     cpu->z = instr->args==0;
 }
 
+void LSR(Instruction* instr, CPU* cpu){
+    instr->name = "lsr";
+
+    uint8_t result = 0;
+    if(instr->addressingMode == ACCUMULATOR){
+        cpu->c = cpu->a & 0x01;
+        cpu->a = cpu->a>>1;
+        result = cpu->a;
+    }else{
+        result = cpu->getDataBus();
+        cpu->c = result & 0x01;
+        result = result>>1;
+
+        cpu->r_wb = false;
+        cpu->addressBus = instr->args;
+        cpu->writeDataBus(result);
+        cpu->updateChildren = true;
+    }
+    
+    // FLAGS:
+    // Negative: always 0.
+    cpu->n = 0;
+    // Set if value is 0
+    cpu->z = result==0;
+}
+
 void PHA(Instruction* instr, CPU* cpu){
     instr->name = "pha";
     cpu->pushToStack(cpu->a);
@@ -333,27 +473,55 @@ void ORA(Instruction* instr, CPU* cpu){
 void ROL(Instruction* instr, CPU* cpu){
     instr->name = "rol";
 
-    cpu->a = (cpu->a << 1) | cpu->c;
+    uint8_t result = 0;
+    if(instr->addressingMode == ACCUMULATOR){
+        result = cpu->a;
+        cpu->a = (cpu->a << 1) | cpu->c;
+        cpu->c = result >> 7;
+        result = cpu->a;
+    }else{
+        uint8_t data = cpu->getDataBus();
+        result = (data << 1) | cpu->c;
+        cpu->c = data >> 7;
 
+        cpu->r_wb = false;
+        cpu->addressBus = instr->args;
+        cpu->writeDataBus(result);
+        cpu->updateChildren = true;
+    }
+    
     // FLAGS:
-    // Set if MSB of result is 1.
-    cpu->n = cpu->a>>7;
-    // MSB of address becomes the carry.
-    cpu->c = instr->args>>7;
-    cpu->z = cpu->a == 0;
+    // Negative: if top bit is 1.
+    cpu->n = result>>7;
+    // Set if value is 0
+    cpu->z = result==0;
 }
 
 void ROR(Instruction* instr, CPU* cpu){
     instr->name = "ror";
 
-    cpu->a = (cpu->a >> 1) | (cpu->c << 7);
+    uint8_t result = 0;
+    if(instr->addressingMode == ACCUMULATOR){
+        result = cpu->a;
+        cpu->a = (cpu->a >> 1) | (cpu->c << 7);
+        cpu->c = result & 1;
+        result = cpu->a;
+    }else{
+        uint8_t data = cpu->getDataBus();
+        result = (data >> 1) | (cpu->c << 7);
+        cpu->c = data & 1;
 
+        cpu->r_wb = false;
+        cpu->addressBus = instr->args;
+        cpu->writeDataBus(result);
+        cpu->updateChildren = true;
+    }
+    
     // FLAGS:
-    // Set if MSB of result is 1.
-    cpu->n = cpu->a>>7;
-    // LSB of address becomes the carry.
-    cpu->c = instr->args>>7;
-    cpu->z = cpu->a == 0;
+    // Negative: if top bit is 1.
+    cpu->n = result>>7;
+    // Set if value is 0
+    cpu->z = result==0;
 }
 
 void RTI(Instruction* instr, CPU* cpu){
@@ -374,6 +542,42 @@ void RTS(Instruction* instr, CPU* cpu){
     cpu->pc = returnAdd;
 
     instr->subroutineJumps--;
+}
+
+void SBC(Instruction* instr, CPU* cpu){
+    instr->name = "sbc";
+
+    uint8_t args = 0;
+    if(instr->addressingMode == IMMEDIATE){
+        args = instr->args;
+    }else{
+        args = cpu->getDataBus();
+    }
+
+    uint8_t prev_a = cpu->a;
+    int8_t a_signed = 0, arg_signed = 0;
+    memcpy(&a_signed, &cpu->a, 1);
+    memcpy(&arg_signed, &args, 1);
+    int8_t sum = a_signed - arg_signed - !cpu->c;
+
+    memcpy(&cpu->a, &sum, 1);
+    // FLAGS:
+    // Negative: Set if MSB of result is 1.
+    cpu->n = cpu->a>>7;
+    // Overflow: Set if signed overflow -> positive + positive = negative or negative + negative = positive
+    bool a_pos = a_signed>0;
+    bool arg_pos = arg_signed>0;
+    bool sum_pos = sum>0;
+    cpu->v = (a_pos && arg_pos && !sum_pos) || (!a_pos && !arg_pos && sum_pos);
+    // Zero: Set if value is 0
+    cpu->z = cpu->a==0;
+    // Carry: Set if unsigned overflow
+    cpu->c = prev_a>cpu->a;
+}
+
+void SEC(Instruction* instr, CPU* cpu){
+    instr->name = "sec";
+    cpu->c = true;
 }
 
 void SEI(Instruction* instr, CPU* cpu){
@@ -473,10 +677,21 @@ vector<Instruction> Instruction::INSTRUCTIONS = {
     Instruction(ADC, 0x69, IMMEDIATE, 2, 2),
     Instruction(ADC, 0x6D, ABSOLUTE, 3, 4, true),
     Instruction(ADC, 0x65, DP, 2, 3, true),
+    Instruction(ADC, 0x75, DP_INDEXED_X, 2, 4, true),
 
     Instruction(AND, 0x29, IMMEDIATE, 2, 2),
 
+    Instruction(ASL, 0x0A, ACCUMULATOR, 1, 2),
+    Instruction(ASL, 0x0E, ABSOLUTE, 3, 6, true),
+    Instruction(ASL, 0x06, DP, 2, 5, true),
+    Instruction(ASL, 0x1E, ABS_INDEXED_X, 3, 6 /*If page is crossed it'll add 1*/, true),
+    Instruction(ASL, 0x16, DP_INDEXED_X, 2, 6, true),
+
     Instruction(BMI, 0x30, IMMEDIATE, 2, 2),
+
+    Instruction(BCC, 0x90, IMMEDIATE, 2, 2),
+
+    Instruction(BCS, 0xB0, IMMEDIATE, 2, 2),
 
     Instruction(BEQ, 0xF0, IMMEDIATE, 2, 2),
 
@@ -491,6 +706,16 @@ vector<Instruction> Instruction::INSTRUCTIONS = {
     Instruction(CMP, 0xCD, ABSOLUTE, 3, 4, true),
     Instruction(CMP, 0xC5, DP, 2, 3, true),
 
+    Instruction(DEC, 0x3A, ACCUMULATOR, 1, 2),
+    Instruction(DEC, 0xCE, ABSOLUTE, 3, 6, true),
+    Instruction(DEC, 0xC6, DP, 2, 5, true),
+    Instruction(DEC, 0xDE, ABS_INDEXED_X, 2, 6, true),
+    Instruction(DEC, 0xD6, DP_INDEXED_X, 2, 6, true),
+
+    Instruction(DEX, 0xCA, IMPLIED, 1, 2),
+
+    Instruction(DEY, 0x88, IMPLIED, 1, 2),
+
     Instruction(EOR, 0x49, IMMEDIATE, 2, 2),
     Instruction(EOR, 0x4D, ABSOLUTE, 3, 4),
     Instruction(EOR, 0x45, DP, 2, 3),
@@ -498,6 +723,8 @@ vector<Instruction> Instruction::INSTRUCTIONS = {
     Instruction(INC, 0x1A, ACCUMULATOR, 1, 2),
     Instruction(INC, 0xEE, ABSOLUTE, 3, 6, true),
     Instruction(INC, 0xE6, DP, 2, 5, true),
+    Instruction(INC, 0xFE, ABS_INDEXED_X, 2, 6, true),
+    Instruction(INC, 0xF6, DP_INDEXED_X, 2, 6, true),
 
     Instruction(INX, 0xE8, IMPLIED, 1, 2),
 
@@ -510,17 +737,26 @@ vector<Instruction> Instruction::INSTRUCTIONS = {
     Instruction(LDA, 0xA9, IMMEDIATE, 2, 2),
     Instruction(LDA, 0xAD, ABSOLUTE, 3, 4, true),
     Instruction(LDA, 0xA5, DP, 2, 3, true),
+    Instruction(LDA, 0xB5, DP_INDEXED_X, 2, 4, true),
     Instruction(LDA, 0xBD, ABS_INDEXED_X, 3, 4, true),
     
     Instruction(LDX, 0xA2, IMMEDIATE, 2, 2),
     Instruction(LDX, 0xAE, ABSOLUTE, 3, 4, true),
     Instruction(LDX, 0xA6, DP, 2, 3, true),
+    Instruction(LDX, 0xB6, DP_INDEXED_Y, 2, 4, true),
     Instruction(LDX, 0xBE, ABS_INDEXED_Y, 3, 4, true),
     
     Instruction(LDY, 0xA0, IMMEDIATE, 2, 2),
     Instruction(LDY, 0xAC, ABSOLUTE, 3, 4, true),
     Instruction(LDY, 0xA4, DP, 2, 3, true),
+    Instruction(LDY, 0xB4, DP_INDEXED_X, 2, 4, true),
     Instruction(LDY, 0xBC, ABS_INDEXED_X, 3, 4, true),
+
+    Instruction(LSR, 0x4A, ACCUMULATOR, 1, 2),
+    Instruction(LSR, 0x4E, ABSOLUTE, 3, 6, true),
+    Instruction(LSR, 0x46, DP, 2, 5, true),
+    Instruction(LSR, 0x5E, ABS_INDEXED_X, 3, 6 /*It'll add 1 if page boundary is crossed*/, true),
+    Instruction(LSR, 0x56, DP_INDEXED_X, 2, 6, true),
     
     Instruction(ORA, 0x09, IMMEDIATE, 2, 2),
 
@@ -532,26 +768,44 @@ vector<Instruction> Instruction::INSTRUCTIONS = {
     Instruction(PLX, 0xFA, IMPLIED, 1, 4),
     Instruction(PLY, 0x7A, IMPLIED, 1, 4),
     
-    Instruction(ROL, 0x2a, ACCUMULATOR, 1, 2),
+    Instruction(ROL, 0x2A, ACCUMULATOR, 1, 2),
+    Instruction(ROL, 0x2E, ABSOLUTE, 3, 6, true),
+    Instruction(ROL, 0x26, DP, 2, 5, true),
+    Instruction(ROL, 0x3E, ABS_INDEXED_X, 3, 6 /*If page boundary cross, it'll add 1*/, true),
+    Instruction(ROL, 0x36, DP_INDEXED_X, 2, 6, true),
     
-    Instruction(ROR, 0x6a, ACCUMULATOR, 1, 2),
-    
+    Instruction(ROR, 0x6A, ACCUMULATOR, 1, 2, true),
+    Instruction(ROR, 0x6E, ABSOLUTE, 3, 6, true),
+    Instruction(ROR, 0x66, DP, 2, 5, true),
+    Instruction(ROR, 0x7E, ABS_INDEXED_X, 3, 6 /*If page boundary cross, it'll add 1*/, true),
+    Instruction(ROR, 0x76, DP_INDEXED_X, 2, 6, true),
+
     Instruction(RTI, 0x40, IMPLIED, 1, 6),
 
     Instruction(RTS, 0x60, IMPLIED, 1, 6),
+
+    Instruction(SBC, 0xE9, IMMEDIATE, 2, 2),
+    Instruction(SBC, 0xED, ABSOLUTE, 3, 4, true),
+    Instruction(SBC, 0xE5, DP, 2, 3, true),
+    Instruction(SBC, 0xF5, DP_INDEXED_X, 2, 4, true),
+
+    Instruction(SEC, 0x38, IMPLIED, 1, 2),
 
     Instruction(SEI, 0x78, IMPLIED, 1, 2),
     
     Instruction(STA, 0x8D, ABSOLUTE, 3, 4),
     Instruction(STA, 0x85, DP, 2, 3),
+    Instruction(STA, 0x95, DP_INDEXED_X, 2, 4),
     Instruction(STA, 0x9D, ABS_INDEXED_X, 3, 5),
     Instruction(STA, 0x99, ABS_INDEXED_Y, 3, 5),
 
     Instruction(STX, 0x8E, ABSOLUTE, 3, 4),
     Instruction(STX, 0x86, DP, 2, 3),
+    Instruction(STX, 0x96, DP_INDEXED_Y, 2, 4),
     
     Instruction(STY, 0x8C, ABSOLUTE, 3, 4),
     Instruction(STY, 0x84, DP, 2, 3),
+    Instruction(STY, 0x94, DP_INDEXED_Y, 2, 4),
     
     Instruction(TAX, 0xAA, IMPLIED, 1, 2),
     
@@ -645,6 +899,18 @@ void Instruction::fetchInstruction(CPU *cpu){
                 break;
             }
 
+            case DP_INDEXED_X:{
+                // Load the byte following the CodeOp.
+                cpu->addressBus = parseByte(romRead) + cpu->x;
+                break;
+            }
+
+            case DP_INDEXED_Y:{
+                // Load the byte following the CodeOp.
+                cpu->addressBus = parseByte(romRead) + cpu->y;
+                break;
+            }
+
             case DP_INDIRECT:{
                 uint8_t dp = parseByte(romRead);
                 uint16_t direction = cpu->readRAM(dp) | (cpu->readRAM(dp+1) << 8);
@@ -656,7 +922,7 @@ void Instruction::fetchInstruction(CPU *cpu){
                 uint16_t temp = cpu->addressBus;
                 cpu->addressBus = args1 + cpu->x;
                 // Check if adding index crosses a page boundary
-                if(temp>>8 != cpu->addressBus>>8) nextInstructionCycleIncrease++;
+                if(temp>>8 != cpu->addressBus>>8) nextInstructionCycleIncrease--;
                 break;
             }
 
@@ -703,6 +969,16 @@ void Instruction::fetchInstruction(CPU *cpu){
 
     case DP:{
         instrArguments = parseByte(romRead);
+        break;
+    }
+
+    case DP_INDEXED_X:{
+        instrArguments = parseByte(romRead) + cpu->x;
+        break;
+    }
+
+    case DP_INDEXED_Y:{
+        instrArguments = parseByte(romRead) + cpu->y;
         break;
     }
 
@@ -760,6 +1036,20 @@ void Instruction::printDecodedInstruction(CPU* cpu){
         uint8_t byteParam = args;
         strArgs += int_to_hex(byteParam);
         strArgs += "  ";
+        break;
+    }
+
+    case DP_INDEXED_X:{
+        uint8_t byteParam = args;
+        strArgs += int_to_hex(byteParam);
+        strArgs += ",x";
+        break;
+    }
+
+    case DP_INDEXED_Y:{
+        uint8_t byteParam = args;
+        strArgs += int_to_hex(byteParam);
+        strArgs += ",y";
         break;
     }
 

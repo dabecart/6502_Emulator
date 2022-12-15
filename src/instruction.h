@@ -13,9 +13,10 @@
 #define ABS_INDEXED_X   5
 #define ABS_INDEXED_Y   6
 #define DP_INDEXED_X    7
-#define DP_INDIRECT     8
-#define DP_INDIRECT_INDEXED_X 9
-#define DP_INDIRECT_INDEXED_Y 10
+#define DP_INDEXED_Y    8
+#define DP_INDIRECT     9
+#define DP_INDIRECT_INDEXED_X 10
+#define DP_INDIRECT_INDEXED_Y 11
 
 #include <string>
 #include <sstream>
