@@ -19,25 +19,21 @@ void ADC(Instruction* instr, CPU* cpu){
         args = cpu->getDataBus();
     }
 
-    uint8_t prev_a = cpu->a;
-    int8_t a_signed = 0, arg_signed = 0;
-    memcpy(&a_signed, &cpu->a, 1);
-    memcpy(&arg_signed, &args, 1);
-    int8_t sum = a_signed + arg_signed + cpu->c;
+    uint8_t prevA = cpu->a;
+    cpu->a += args + cpu->c;
 
-    memcpy(&cpu->a, &sum, 1);
     // FLAGS:
     // Negative: Set if MSB of result is 1.
     cpu->n = cpu->a>>7;
     // Overflow: Set if signed overflow -> positive + positive = negative or negative + negative = positive
-    bool a_pos = a_signed>0;
-    bool arg_pos = arg_signed>0;
-    bool sum_pos = sum>0;
-    cpu->v = (a_pos && arg_pos && !sum_pos) || (!a_pos && !arg_pos && sum_pos);
+    bool a_neg = prevA>>7;
+    bool arg_neg = args>>7;
+    bool sum_neg = cpu->a>>7;
+    cpu->v = (a_neg && arg_neg && !sum_neg) || (!a_neg && !arg_neg && sum_neg);
     // Zero: Set if value is 0
     cpu->z = cpu->a==0;
     // Carry: Set if unsigned overflow
-    cpu->c = prev_a>cpu->a;
+    cpu->c = prevA>=cpu->a;
 }
 
 void AND(Instruction* instr, CPU* cpu){
@@ -61,7 +57,7 @@ void ASL(Instruction* instr, CPU* cpu){
         result = cpu->a;
     }else{
         result = cpu->getDataBus();
-        cpu->c = result << 7;
+        cpu->c = result >> 7;
         result = result << 1;
 
         cpu->r_wb = false;
@@ -147,6 +143,7 @@ void BEQ(Instruction *instr, CPU* cpu){
         // Add one cycle more if branch taken crosses boundary.
         if(temp>>8 != (cpu->pc+2)>>8) instr->nextInstructionCycleIncrease++;
     }
+    
 }
 
 // Branch if n = 0 (positive number)
@@ -544,6 +541,7 @@ void RTS(Instruction* instr, CPU* cpu){
     instr->subroutineJumps--;
 }
 
+/* // Old complicated method using signed numbers, there's no need to do that, it's better to use the bit trickery IMO
 void SBC(Instruction* instr, CPU* cpu){
     instr->name = "sbc";
 
@@ -571,8 +569,47 @@ void SBC(Instruction* instr, CPU* cpu){
     cpu->v = (a_pos && arg_pos && !sum_pos) || (!a_pos && !arg_pos && sum_pos);
     // Zero: Set if value is 0
     cpu->z = cpu->a==0;
-    // Carry: Set if unsigned overflow
-    cpu->c = prev_a>cpu->a;
+    // Carry: Set if unsigned borrow not required
+    cpu->c = prev_a>=args;
+}
+*/
+
+void SBC(Instruction* instr, CPU* cpu){
+    instr->name = "sbc";
+
+    uint8_t args = 0;
+    if(instr->addressingMode == IMMEDIATE){
+        args = instr->args;
+    }else{
+        args = cpu->getDataBus();
+    }
+
+    uint8_t prevA = cpu->a;
+    // A bit of bit magic: so, subtracting in 2s-complement is the same as adding the 2s-complement
+    // of the number, which literally is the negation of the number plus one. The 6502 instead of adding
+    // that one by itself requires the programmer to set the carry first using SEC. When using multiple 
+    // byte operations involving this instruction, the carry bit is used to signal that the next subtraction
+    // needs a carry (if LB1 < LB2, it has to be subtracted one from the HB2, that is the same as NOT adding
+    // that bit in the 2s-complement). So, for example: 
+    // $0108 - $0008 = $0108 + $FFF7 + 1    -> LSB: 08 + F7 + 1 = 1 00  (carry is 1)    -> Result = $0100   (carry 1, meaning result is positive!)
+    //                                      -> MSB: 01 + FF + 1 = 1 01  (carry is 1)------------------------^
+    // Meanwhile:
+    // $0A55 - $1111 = $0A55 + $EEEE + 1    -> LSB: 55 + EE + 1 = 1 44  (carry is 1)    -> Result = $F944   (carry 0, meaning result is negative!)
+    //                                      -> MSB: 0A + EE + 1 = 0 F9  (carry is 0)------------------------^
+    cpu->a += ~args + cpu->c;
+
+    // FLAGS:
+    // Negative: Set if MSB of result is 1.
+    cpu->n = cpu->a>>7;
+    // Overflow: Set if signed overflow -> positive + positive = negative or negative + negative = positive
+    bool a_pos = !(prevA>>7);
+    bool arg_pos = args>>7; // As the result is negated, no need to !
+    bool sum_pos = !(cpu->a>>7);
+    cpu->v = (a_pos && arg_pos && !sum_pos) || (!a_pos && !arg_pos && sum_pos);
+    // Zero: Set if value is 0
+    cpu->z = cpu->a==0;
+    // Carry: Set if unsigned borrow not required
+    cpu->c = prevA >= cpu->a;
 }
 
 void SEC(Instruction* instr, CPU* cpu){
@@ -609,6 +646,15 @@ void STY(Instruction* instr, CPU* cpu){
     cpu->r_wb = false;
     cpu->addressBus = instr->args;
     cpu->writeDataBus(cpu->y);
+    cpu->updateChildren = true;
+}
+
+void STZ(Instruction* instr, CPU* cpu){
+    instr->name = "stz";
+
+    cpu->r_wb = false;
+    cpu->addressBus = instr->args;
+    cpu->writeDataBus(0);
     cpu->updateChildren = true;
 }
 
@@ -795,9 +841,9 @@ vector<Instruction> Instruction::INSTRUCTIONS = {
     
     Instruction(STA, 0x8D, ABSOLUTE, 3, 4),
     Instruction(STA, 0x85, DP, 2, 3),
-    Instruction(STA, 0x95, DP_INDEXED_X, 2, 4),
     Instruction(STA, 0x9D, ABS_INDEXED_X, 3, 5),
     Instruction(STA, 0x99, ABS_INDEXED_Y, 3, 5),
+    Instruction(STA, 0x95, DP_INDEXED_X, 2, 4),
 
     Instruction(STX, 0x8E, ABSOLUTE, 3, 4),
     Instruction(STX, 0x86, DP, 2, 3),
@@ -806,6 +852,11 @@ vector<Instruction> Instruction::INSTRUCTIONS = {
     Instruction(STY, 0x8C, ABSOLUTE, 3, 4),
     Instruction(STY, 0x84, DP, 2, 3),
     Instruction(STY, 0x94, DP_INDEXED_Y, 2, 4),
+
+    Instruction(STZ, 0x9C, ABSOLUTE, 3, 4),
+    Instruction(STZ, 0x64, DP, 2, 3),
+    Instruction(STZ, 0x9E, ABS_INDEXED_X, 3, 5),
+    Instruction(STZ, 0x74, DP_INDEXED_X, 2, 4),
     
     Instruction(TAX, 0xAA, IMPLIED, 1, 2),
     
@@ -1040,27 +1091,27 @@ void Instruction::printDecodedInstruction(CPU* cpu){
     }
 
     case DP_INDEXED_X:{
-        uint8_t byteParam = args;
+        uint8_t byteParam = args-cpu->x;
         strArgs += int_to_hex(byteParam);
         strArgs += ",x";
         break;
     }
 
     case DP_INDEXED_Y:{
-        uint8_t byteParam = args;
+        uint8_t byteParam = args-cpu->y;
         strArgs += int_to_hex(byteParam);
         strArgs += ",y";
         break;
     }
 
     case ABS_INDEXED_X:{
-        strArgs += int_to_hex(args);
+        strArgs += int_to_hex(args-cpu->x);
         strArgs += ",x";
         break;
     }
 
     case ABS_INDEXED_Y:{
-        strArgs += int_to_hex(args);
+        strArgs += int_to_hex(args-cpu->y);
         strArgs += ",y";
         break;
     }

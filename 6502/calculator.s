@@ -15,10 +15,12 @@ kb_w = $00	; Keyboard write pointer
 kb_r = $01	; Keyboard read pointer
 kb_flags = $02	; Keyboard flag
 
-; Stores the values of the operands and result (64 bits)
+; Stores the values of the operands and result
+OP_SIZE = 4
 op1 = $03
-op2 = op1 + 4
-ans = op1 + 8
+op2 = op1 + OP_SIZE
+ans = op1 + OP_SIZE*2
+rem = op1 + OP_SIZE*3	; Remainder (used in division)
 
 KB_RELEASE 	= %00000001
 KB_SHIFT 	= %00000010
@@ -66,21 +68,19 @@ start_lcd_4bit:
 	lda #%00000001	; Home
 	jsr send_lcd_instruction
 
-    lda #$B9
+    lda #$B3
     sta op1
-	lda #$4A
-	sta op1+1
+    lda #$A6
+    sta op1+1
 
-    lda #$0A
+	lda #$11
     sta op2
-	lda #$41
-	sta op2+1
-    
-    jsr u8_mult
+    lda #$00
+    sta op2+1
+
+	jsr u16_mod
     lda ans
-    lda ans+1
-	lda ans+2
-	lda ans+3
+	lda ans+1
 
     nop
 
@@ -184,6 +184,63 @@ continue_key_down:
 	jsr send_lcd
 	rts
 
+u16_mod:
+	jsr u16_division
+	lda rem
+	sta ans
+	lda rem+1
+	sta ans+1
+	rts
+
+u8_mod:
+	jsr u8_division
+	lda rem
+	sta ans
+	rts
+
+u16_division:
+	jsr clear_ans
+	phx
+	inc ans
+u16_divl1:
+	asl op1
+	rol op1+1
+	rol rem
+	rol rem+1
+	
+	lda rem
+	sec
+	sbc op2
+	tax
+	lda rem+1
+	sbc op2+1
+	bcc u16_divl2	; Branch if subtraction is negative
+	sta rem+1
+	txa
+	sta rem
+u16_divl2:
+	rol ans
+	rol ans+1
+	bcc u16_divl1
+	plx
+	rts
+
+u8_division:
+	jsr clear_ans
+	inc ans		; Load with trigger bit. When the answer ROL gets this bit, 8 cycles have been done.
+u8_divl1:
+	asl op1		; Pass the next bit to the remainder
+	rol rem		
+	lda rem
+	sec			; Subtract the divisor from the current remainder
+	sbc op2		
+	bcc u8_divl2 ; Branch if subtraction is negative
+	sta rem
+u8_divl2:
+	rol ans
+	bcc u8_divl1
+	rts
+
 u16_mult:
 	jsr clear_ans
 	lda #$80
@@ -194,6 +251,7 @@ u16_l1:
 	lsr op2+1	; Get low bit of op2
 	ror op2
 	bcc u16_l2	; Low bit = 0?
+
 	lda ans+2	
 	adc op1
 	sta ans+2
@@ -202,12 +260,11 @@ u16_l1:
 	adc op1+1
 	sta ans+3	; A is loaded with the highest byte of ans
 u16_l2:
-	ror a
+	ror ans+3
 	ror ans+2
 	ror ans+1
 	ror ans
 	bcc u16_l1
-	sta ans+3
 	rts
 
 u8_mult:
@@ -269,12 +326,12 @@ sub_byte:
     sta ans,x
     rts
 
-clear_ans:
-	lda #0
-	sta ans
-	sta ans+1
-	sta ans+2
-	sta ans+3
+clear_ans:	; Clear ans and remainder
+	ldx #OP_SIZE*2
+clear_ans_loop:
+	dex
+	stz ans,x
+	bne clear_ans_loop
 	rts
 
 ; ********************* IRQ *********************

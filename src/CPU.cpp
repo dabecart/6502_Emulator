@@ -205,7 +205,7 @@ void CPU::ROMListener(){
 
 void CPU::pushToStack(uint8_t data){
     if(stackPointer == 0x100){
-        std::cout << "Stack overflow JSR 0! ";
+        std::cout << "Stack overflow! ";
         stackPointer = 0x1FF;
     }else{
         stackPointer--;
@@ -216,7 +216,7 @@ void CPU::pushToStack(uint8_t data){
 uint8_t CPU::pullFromStack(){
     uint8_t data = readRAM(stackPointer);
     if(stackPointer == 0x1FF){
-        std::cout << "Stack overflow JSR 0! ";
+        std::cout << "Stack overflow ";
         stackPointer = 0x100;
     }else{
         stackPointer++;
