@@ -347,9 +347,9 @@ void LDA(Instruction* instr, CPU* cpu){
     
     // FLAGS:
     // Set if MSB of loaded value is 1.
-    cpu->n = instr->args>>7;
+    cpu->n = cpu->a>>7;
     // Set if value is 0
-    cpu->z = instr->args==0;
+    cpu->z = cpu->a==0;
 }
 
 void LDX(Instruction* instr, CPU* cpu){
@@ -362,9 +362,9 @@ void LDX(Instruction* instr, CPU* cpu){
     }
     // FLAGS:
     // Set if MSB of loaded value is 1.
-    cpu->n = instr->args>>7;
+    cpu->n = cpu->x>>7;
     // Set if value is 0
-    cpu->z = instr->args==0;
+    cpu->z = cpu->x==0;
 }
 
 void LDY(Instruction* instr, CPU* cpu){
@@ -377,9 +377,9 @@ void LDY(Instruction* instr, CPU* cpu){
     }
     // FLAGS:
     // Set if MSB of loaded value is 1.
-    cpu->n = instr->args>>7;
+    cpu->n = cpu->y>>7;
     // Set if value is 0
-    cpu->z = instr->args==0;
+    cpu->z = cpu->y==0;
 }
 
 void LSR(Instruction* instr, CPU* cpu){
@@ -726,6 +726,11 @@ vector<Instruction> Instruction::INSTRUCTIONS = {
     Instruction(ADC, 0x75, DP_INDEXED_X, 2, 4, true),
 
     Instruction(AND, 0x29, IMMEDIATE, 2, 2),
+    Instruction(AND, 0x2D, ABSOLUTE, 3, 4),
+    Instruction(AND, 0x25, DP, 4, 5),
+    Instruction(AND, 0x3D, ABS_INDEXED_X, 3, 4),
+    Instruction(AND, 0x39, ABS_INDEXED_Y, 3, 4),
+    Instruction(AND, 0x35, DP_INDEXED_X, 2, 4),
 
     Instruction(ASL, 0x0A, ACCUMULATOR, 1, 2),
     Instruction(ASL, 0x0E, ABSOLUTE, 3, 6, true),
@@ -785,6 +790,7 @@ vector<Instruction> Instruction::INSTRUCTIONS = {
     Instruction(LDA, 0xA5, DP, 2, 3, true),
     Instruction(LDA, 0xB5, DP_INDEXED_X, 2, 4, true),
     Instruction(LDA, 0xBD, ABS_INDEXED_X, 3, 4, true),
+    Instruction(LDA, 0xB9, ABS_INDEXED_Y, 3, 4, true),
     
     Instruction(LDX, 0xA2, IMMEDIATE, 2, 2),
     Instruction(LDX, 0xAE, ABSOLUTE, 3, 4, true),
@@ -805,6 +811,11 @@ vector<Instruction> Instruction::INSTRUCTIONS = {
     Instruction(LSR, 0x56, DP_INDEXED_X, 2, 6, true),
     
     Instruction(ORA, 0x09, IMMEDIATE, 2, 2),
+    Instruction(ORA, 0x0D, ABSOLUTE, 3, 4),
+    Instruction(ORA, 0x05, DP, 4, 5),
+    Instruction(ORA, 0x1D, ABS_INDEXED_X, 3, 4),
+    Instruction(ORA, 0x19, ABS_INDEXED_Y, 3, 4),
+    Instruction(ORA, 0x15, DP_INDEXED_X, 2, 4),
 
     Instruction(PHA, 0x48, IMPLIED, 1, 3),
     Instruction(PHX, 0xDA, IMPLIED, 1, 3),

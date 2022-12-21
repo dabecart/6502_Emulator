@@ -23,7 +23,9 @@ ans = op1 + OP_SIZE*2
 rem = op1 + OP_SIZE*3	; Remainder (used in division)
 
 KB_RELEASE 	= %00000001
-KB_SHIFT 	= %00000010
+
+; CALCULATOR
+CALCULATOR_MEMSPACE = $0300 
 
 kb_buffer = $0200	; Position of the buffer (256 bytes, 0200 - 02ff)
 
@@ -68,121 +70,353 @@ start_lcd_4bit:
 	lda #%00000001	; Home
 	jsr send_lcd_instruction
 
-    lda #$B3
-    sta op1
-    lda #$A6
-    sta op1+1
+	ldx #0
+test_input:
+	lda input_expression,x
+	sta kb_buffer,x
+	beq test_2
+	inx
+	jmp test_input
 
-	lda #$11
-    sta op2
-    lda #$00
-    sta op2+1
-
-	jsr u16_mod
-    lda ans
-	lda ans+1
-
-    nop
+test_2:
+	stx kb_r
+	jsr calculator_bootup
 
 loop:
+	sei
+	lda kb_r
+	cmp kb_w
+	cli
+	bne key_down
 	jmp loop
 
-send_lcd_instruction:
-	pha
-	; Send the first 4 bits of the letter
-	and #$F0		; Fetch the first 4 bits
-	ror				; Rotate A one to the right
+key_down:
+	lda #%00000001	; Clear screen
+	jsr send_lcd_instruction
 
-	jsr lcd_instruction
+	ldx kb_r
+	lda kb_buffer, X
+; CHECK FOR IMPORTANT KEY PRESSES
+	cmp #$0a		; enter key down
+	beq enter_pressed
+	cmp #$1b		; escape pressed
+	beq esc_pressed 
 
-	pla
-	; Send the next 4 bits of the letter
-	and #$0F		; Fetch the last 4 bits
-	rol				; Rotate A three to the left
-	rol
-	rol
+	jsr send_lcd
+key_down_end:
+    inc kb_r
+	jmp loop
 
-	jsr lcd_instruction_nowait
-	rts
+enter_pressed:
+	lda #%10101000	; put cursor at position 40
+	jsr send_lcd_instruction
+	
+	ldx kb_r
+	stz kb_buffer,x	; Clear the enter sign as it could confound the calculator.
+	dec kb_r
 
-send_lcd:
-	pha
-	; Send the first 4 bits of the letter
-	and #$F0		; Fetch the first 4 bits
-	ror				; Rotate A one to the right
+	jsr calculator_bootup
 
-	ora #$01		; Add the 1 from RS signal
-	jsr lcd_instruction
+esc_pressed:
+	lda #%00000001	; clear display
+	jsr send_lcd_instruction
+	
+	; Restart whole calculator
+clear_calculator_buffer:
+	ldx #0
+	stz kb_buffer,x
+	inx
+	beq clear_calculator_buffer
 
-	pla
-	; Send the next 4 bits of the letter
-	and #$0F		; Fetch the last 4 bits
-	rol				; Rotate A three to the left
-	rol
-	rol
+	stz kb_w
+	stz kb_r
+	stz kb_flags
+	jmp loop
 
-	ora #$01		; Add the 1 from RS signal
-	jsr lcd_instruction_nowait
-	rts
+;************************ CALCULATOR ************************
+; Stores the level in the program we're in. First level 1 means the program is on the first call, 
+; if the same method is later called because there's an inner parenthesis, this value will be different.
+; Think of it as a memory bank indicator.
+; Each level will get a total of 16 different places of memory, that's 16 byte size variables. 
+; There are only 15 levels. Level 0 is reserved for global variables.
+input_expression: .asciiz "5+6"
 
-lcd_instruction:
-	jsr lcd_wait
-lcd_instruction_nowait:
-	pha
-	lda #%1111111	; Set bottom 7 pins as output
-	sta DD_PORTB	; Initialize Data direction register B
-	pla
-	sta PORTB
-	ora #%00000100	; Set ENABLE high
-	sta PORTB
-	and #%11111011	; Set ENABLE low
-	sta PORTB
-	rts
+; GLOBAL VARIABLES
+currentLevel = CALCULATOR_MEMSPACE
+return = CALCULATOR_MEMSPACE+15
 
-lcd_wait:	;  Wait for busy flag = 0
+inLength = kb_r	; We can save this one as the length has been already calculated.
+
+; Memory location of the subsequent variables will be: 
+; CALCULATOR_MEMSPACE ($0400) + CurrentLevel + VARIABLE NAME = Variable direction.
+VARIABLE_MEMSPACE = CALCULATOR_MEMSPACE+$100
+TOTAL_VARIABLES = 4	; To make everything easier, all functions will have the same number of variables.
+from = 0
+to = 1
+s1 = 2
+s2 = 3
+
+calculator_bootup:
+	lda #$00
+	sta currentLevel
+
+	ldx #from
+	lda #0
+	jsr pass_param
+
+	ldx #to
+	lda inLength
+	jsr pass_param
+
+checkExpression:
 	pha
 	phx
-	lda #%0000111	; Set 4 data pins as inputs, but maintain RS,RW,E as outputs
-	sta DD_PORTB	; Initialize Data direction register B
-lcd_read_flag:
-	lda #%0000010	; Fetch the busy flag (ENABLE low)
-	sta PORTB
-	lda #%0000110	; Set ENABLE high
-	sta PORTB
-	ldx PORTB		; BF x x x x x x -> X
-	lda #%0000010	;  Set ENABLE low
-	sta PORTB
+	phy
+	jsr increase_currentLevel
+	lda inLength	; Previous length
 
-	lda #%0000010	; Second mandatory read (because 4 bit mode)
-	sta PORTB
-	lda #%0000110	; Set ENABLE high
-	sta PORTB
-	lda #%0000010	;  Set ENABLE low
-	sta PORTB
+; while_check_parenthesis:
+; 	jsr checkParenthesis
+; 	jsr updateToParam
+; 	ldx return
+; 	bne while_check_parenthesis
 
-	txa
-	and #%1000000
-	bne lcd_read_flag ; BF is 1, so AND instruction makes Z flag = 0.
+; while_searchForMultDiv:
+; 	jsr searchForSymbol
+; 	jsr updateToParam
+; 	ldx return
+; 	bne while_searchForMultDiv
 
+while_searchForSumSub:
+	ldx #from
+	jsr lda_var
+	jsr pass_param
+
+	ldx #to
+	jsr lda_var
+	jsr pass_param
+
+	ldx #s1
+	lda #'+'
+	jsr pass_param
+
+	ldx #s2
+	lda #'-'
+	jsr pass_param
+
+	jsr searchForSymbol
+	jsr updateToParam
+	ldx return
+	bne while_searchForSumSub
+
+	ply
 	plx
 	pla
 	rts
 
-print_number:
-    and #$0F
-    cmp #10
-    clc
-    bpl num_over10
-
-    adc #'0'
-    jmp continue_key_down
-
-num_over10:
-    adc #55 ; A is 65 in ASCII, minus 10...
-
-continue_key_down:
-	jsr send_lcd
+updateToParam:
+	; Prev already stored in A
+	; To = To - Prev - InLenght -> To = To - (Prev + InLength)
+	clc
+	adc inLength
+	ldx to
+	sta to	; Prev + Inlength saved to TO
+	txa
+	sec
+	sbc to	
+	sta to
+	lda inLength
 	rts
+
+checkParenthesis:
+	pha
+	phx
+	phy
+	jsr increase_currentLevel
+
+	ldx #from
+	jsr lda_var
+	tax		; From value -> X
+
+checkParenthesis_whileFromLoop:
+	lda kb_buffer, x
+	cmp #'('
+	beq find_closing_parenthesis
+	cmp #')'
+	jsr error_handling	; SYNTAX ERROR: Missing closing parenthesis
+	jmp checkParenthesis_whileFromLoop_continue
+
+find_closing_parenthesis:
+	txa
+	ldx #from
+	jsr sta_var	;Save "from" value for later parenthesis removal
+	tax
+
+	ldy #1	; Parenthesis recount -> Y
+	inx		; Now, j variable of for loop -> X
+find_closing_parenthesis_loop:
+	lda kb_buffer, x
+	cmp #'('
+	bne find_closing_parenthesis_checkClose
+	iny
+find_closing_parenthesis_checkClose:
+	cmp #')'
+	bne find_closing_parenthesis_checkZeroRecount
+	dey
+find_closing_parenthesis_checkZeroRecount:
+	bne find_closing_parenthesis_loopContinue
+
+	; Call check expression again. Current level must be increased.
+	phx
+
+	ldx #from
+	jsr lda_var
+	inc A
+	jsr pass_param
+
+	plx
+	txa
+	ldx #to
+	jsr pass_param
+
+	jsr checkExpression
+
+	ldx #from
+	jsr lda_var
+	tax
+	inx
+
+remove_parenthesis_loop:
+	lda kb_buffer, x
+	cmp #'('
+	bne remove_parenthesis_loopcontinue
+
+	ldy #' '
+	tya
+	sta kb_buffer, x
+
+	ldx #from
+	jsr lda_var
+	tax
+	tya
+	sta kb_buffer, x
+
+	jsr clearWhitespaces
+
+remove_parenthesis_loopcontinue:
+	inx
+	txa
+	cmp inLength
+	bne remove_parenthesis_loop
+	
+	jsr error_handling ; How did I get here?
+
+find_closing_parenthesis_loopContinue:
+	inx
+	txa
+	cmp to
+	bne find_closing_parenthesis_loop
+
+	jsr error_handling	; SYNTAX ERROR: Misplaced opening parenthesis
+
+checkParenthesis_whileFromLoop_continue:
+	inx
+	txa
+	cmp to
+	bne checkParenthesis_whileFromLoop
+
+	jsr return_false
+	pla
+	rts
+
+clearWhitespaces:
+	rts
+
+searchForSymbol:
+	pha
+	phx
+	phy
+
+	
+
+	ply
+	plx
+	pla
+	rts
+
+error_message: .asciiz "Error"
+
+error_handling:
+	ldx #0
+error_handling_loop:
+	lda error_message,x
+	beq error_handling_exit	
+	jsr send_lcd
+	inx
+	jmp error_handling_loop
+error_handling_exit:
+	; Restart the stack pointer
+	ldx #$ff
+	txs
+	jmp loop
+
+return_true:
+	sec
+	rol return
+	rts
+
+return_false:
+	stz return
+	rts
+
+; Stores value A in variable "named" X for the next stage
+pass_param:
+	jsr increase_currentLevel
+	jsr sta_var
+	jsr decrease_currentLevel
+	rts
+
+increase_currentLevel:
+	pha
+	lda #TOTAL_VARIABLES
+	clc
+	adc currentLevel
+	sta currentLevel
+	pla
+	rts
+
+decrease_currentLevel:
+	pha
+	lda #TOTAL_VARIABLES
+	sec
+	sbc currentLevel
+	sta currentLevel
+	pla
+	rts
+
+; Loads value stored in variable "named" X to register A
+lda_var:
+	jsr create_variable_loc
+	lda VARIABLE_MEMSPACE, Y
+	rts
+
+; Stores value A into variable "named" (whose location is) X
+sta_var:
+	jsr create_variable_loc
+	sta VARIABLE_MEMSPACE, Y
+	rts  
+
+; Variable named (whose location is) X will be located in currentLevel + Y.
+create_variable_loc:
+	pha
+	txa
+	clc
+	adc currentLevel
+	tay
+	pla
+	rts
+
+;************************ MATH CORE ************************
 
 u16_mod:
 	jsr u16_division
@@ -334,6 +568,103 @@ clear_ans_loop:
 	bne clear_ans_loop
 	rts
 
+; ********************* LCD *********************
+
+print_number:
+    and #$0F
+    cmp #10
+    clc
+    bpl num_over10
+
+    adc #'0'
+    jmp continue_print_number
+num_over10:
+    adc #55 ; A is 65 in ASCII, minus 10...
+continue_print_number:
+	jsr send_lcd
+	rts
+
+send_lcd_instruction:
+	pha
+	; Send the first 4 bits of the letter
+	and #$F0		; Fetch the first 4 bits
+	ror				; Rotate A one to the right
+
+	jsr lcd_instruction
+
+	pla
+	; Send the next 4 bits of the letter
+	and #$0F		; Fetch the last 4 bits
+	rol				; Rotate A three to the left
+	rol
+	rol
+
+	jsr lcd_instruction_nowait
+	rts
+
+send_lcd:
+	pha
+	; Send the first 4 bits of the letter
+	and #$F0		; Fetch the first 4 bits
+	ror				; Rotate A one to the right
+
+	ora #$01		; Add the 1 from RS signal
+	jsr lcd_instruction
+
+	pla
+	; Send the next 4 bits of the letter
+	and #$0F		; Fetch the last 4 bits
+	rol				; Rotate A three to the left
+	rol
+	rol
+
+	ora #$01		; Add the 1 from RS signal
+	jsr lcd_instruction_nowait
+	rts
+
+lcd_instruction:
+	jsr lcd_wait
+lcd_instruction_nowait:
+	pha
+	lda #%1111111	; Set bottom 7 pins as output
+	sta DD_PORTB	; Initialize Data direction register B
+	pla
+	sta PORTB
+	ora #%00000100	; Set ENABLE high
+	sta PORTB
+	and #%11111011	; Set ENABLE low
+	sta PORTB
+	rts
+
+lcd_wait:	;  Wait for busy flag = 0
+	pha
+	phx
+	lda #%0000111	; Set 4 data pins as inputs, but maintain RS,RW,E as outputs
+	sta DD_PORTB	; Initialize Data direction register B
+lcd_read_flag:
+	lda #%0000010	; Fetch the busy flag (ENABLE low)
+	sta PORTB
+	lda #%0000110	; Set ENABLE high
+	sta PORTB
+	ldx PORTB		; BF x x x x x x -> X
+	lda #%0000010	;  Set ENABLE low
+	sta PORTB
+
+	lda #%0000010	; Second mandatory read (because 4 bit mode)
+	sta PORTB
+	lda #%0000110	; Set ENABLE high
+	sta PORTB
+	lda #%0000010	;  Set ENABLE low
+	sta PORTB
+
+	txa
+	and #%1000000
+	bne lcd_read_flag ; BF is 1, so AND instruction makes Z flag = 0.
+
+	plx
+	pla
+	rts
+
 ; ********************* IRQ *********************
 irq:
 	pha
@@ -352,6 +683,17 @@ read_key:
 	lda PORTA
 	cmp #$F0	; If releasing a key, it will receive a F0
 	beq set_release_flag
+	cmp #$0A	; ENTER key is down, so skip comprobation of 255 characters written in input.
+	beq push_key_to_buffer
+
+	; If the buffer is at 254 chars no more chars will be loaded.
+	tax
+	lda kb_w
+	eor #$FE
+	beq exit_irq
+
+	; Fetch the real key from the scancode
+	lda keymap, x
 
 push_key_to_buffer:
 	ldx kb_w
@@ -371,6 +713,25 @@ exit_irq:
 
 nmi:
 	rti
+
+  .org $fd00
+keymap:.byte "????????????? `?" ; 00-0F
+  .byte "????????????? `?" ; 00-0F
+  .byte "?????q1???zsaw2?" ; 10-1F
+  .byte "?cxde43?? vftr5?" ; 20-2F
+  .byte "?nbhgy6???mju78?" ; 30-3F
+  .byte "?,kio09??./l;p-?" ; 40-4F
+  .byte "??'?[=????",$0a,"]?\??" ; 50-5F
+  .byte "?????????1?47???" ; 60-6F
+  .byte "0.2568",$1b,"??+3-*9??" ; 70-7F
+  .byte "????????????????" ; 80-8F
+  .byte "????????????????" ; 90-9F
+  .byte "????????????????" ; A0-AF
+  .byte "????????????????" ; B0-BF
+  .byte "????????????????" ; C0-CF
+  .byte "????????????????" ; D0-DF
+  .byte "????????????????" ; E0-EF
+  .byte "????????????????" ; F0-FF
 
 	.org $fffa			; Entry direction of the W65C02
 	.word nmi

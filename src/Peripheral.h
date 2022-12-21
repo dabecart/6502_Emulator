@@ -125,12 +125,14 @@ class Keyboard{
 
     string keySequence;
     uint8_t currentKeyIndex = 0; // Index of last character sent of keySequence. 
+    bool pressEnter = false;
 
     Chip *parent;
     uint8_t pinConnections[8];
     uint8_t IRQ_pin;
 
     void setKeySequence(string str);
+    void pressEnterAtEndOfSequence();
     void pressKey(char c);
     void sendScanCode(uint8_t scanCode);
 

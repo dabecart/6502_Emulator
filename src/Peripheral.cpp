@@ -537,7 +537,13 @@ void Keyboard::sendScanCode(uint8_t scanCode){
 
 void Keyboard::typeKeySequence(uint64_t time_ms, uint64_t startTypingTime){
     static uint32_t triggerTime = startTypingTime;
-    if(currentKeyIndex >= keySequence.length() || time_ms < triggerTime) return;
+    if(time_ms < triggerTime) return;
+    if(currentKeyIndex >= keySequence.length()){
+        if(pressEnter){
+            sendScanCode(0x0A);
+        }
+        else return;
+    } 
 
     // 0 = Pressing, 1 = Send 0xF0, 2 = Send released keyscan 
     static uint8_t keyProcessIndex = 0;
@@ -570,5 +576,9 @@ void Keyboard::typeKeySequence(uint64_t time_ms, uint64_t startTypingTime){
 }
 
 bool Keyboard::keySequenceFinished(){
-    return currentKeyIndex >= keySequence.length();
+    return currentKeyIndex >= keySequence.length() && !pressEnter;
+}
+
+void Keyboard::pressEnterAtEndOfSequence(){
+    pressEnter = true;
 }

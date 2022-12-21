@@ -18,7 +18,8 @@ int main(){
     cpu.addChild(&via);
     via.addChild(&lcd);
 
-    keyboard.setKeySequence("/");
+    keyboard.setKeySequence("5+6");
+    keyboard.pressEnterAtEndOfSequence();
 
     Instruction::sortInstructions();
     cpu.reset();
@@ -28,7 +29,7 @@ int main(){
     while(!keyboard.keySequenceFinished()){
         uint64_t time = cpu.cycleCounter*1000/CLOCK_SPEED;
 
-        //keyboard.typeKeySequence(time, 5);
+        //keyboard.typeKeySequence(time, 4);
         cpu.run();
         std::this_thread::sleep_for(std::chrono::nanoseconds(500));
     }

@@ -23,7 +23,7 @@
 #include <algorithm>
 #include <vector>
 
-#define MAX_SUBROUTINE_JUMPS 5 //For debug purposes
+#define MAX_SUBROUTINE_JUMPS 6 //For debug purposes
 
 class Instruction {
 
