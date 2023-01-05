@@ -9,6 +9,8 @@ public class Arithmetic extends Operator{
 
     public Arithmetic(Token tok, Expression exp1, Expression exp2){
         super(tok, null);
+        this.exp1 = exp1;
+        this.exp2 = exp2;
         type = Type.typeConversion(exp1.type, exp2.type);
         if(type == null) error("Type conversion error");
     }

@@ -1,5 +1,7 @@
 package compiler.lexer;
 
+import java.util.ArrayList;
+import java.util.List;
 
 /*
  * This class is used to manage lexemes for reserved words, identifiers
@@ -10,7 +12,7 @@ public class Word extends Token{
 
     public Word(String s, int tag){
         super(tag);
-        lexeme = s;
+        this.lexeme = s;
         Lexer.putWord(this);
     }
 
@@ -37,6 +39,25 @@ public class Word extends Token{
 
         Temp = new Word("t", Tag.TEMP);
 
+        static final List<Word> reservedWords = new ArrayList<Word>(){{
+            add(and);
+            add(or);
+            add(eq);
+            add(neq);
+            add(leq);
+            add(geq);
+            add(minus);
+            add(True);
+            add(False);
+
+            add(If);
+            add(Else);
+            add(While);
+            add(Do);
+            add(Break);
+
+            add(Temp);
+        }};
 
 
 }

@@ -9,7 +9,7 @@ public class TemporalExpression extends Expression{
 
     public TemporalExpression(Type p){
         super(Word.Temp, p);
-        number = count++;
+        number = ++count;
     }
 
     public String toString(){

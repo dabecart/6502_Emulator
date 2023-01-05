@@ -15,11 +15,11 @@ public class Node {
 
     static int labels = 0;
     public static int newLabel(){
-        return labels++;
+        return ++labels;
     }
 
     public void printLabel(int labelNumber){
-        System.out.println("L" + labelNumber + ":");
+        System.out.print("L" + labelNumber + ":");
     }
 
     public void print(String s){

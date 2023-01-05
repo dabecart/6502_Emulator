@@ -21,6 +21,21 @@ public class Expression extends Node {
         return this;
     }
 
+    public void jump(int trueLabel, int falseLabel){
+        printJump(toString(), trueLabel, falseLabel);
+    }
+
+    public void printJump(String testExpression, int trueLabel, int falseLabel){
+        if(trueLabel != 0 && falseLabel != 0){
+            print("if " + testExpression + " goto L" + trueLabel);
+            print("goto L" + falseLabel);
+        }else if(trueLabel != 0){
+            print("if " + testExpression + " goto L" + trueLabel);
+        }else if(falseLabel != 0){
+            print("ifnot " + testExpression + " goto L" + falseLabel);
+        }
+    }
+
     public String toString(){
         return op.toString();
     }

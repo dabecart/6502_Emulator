@@ -22,5 +22,6 @@ public class Tag {
                             ID = 512,       // Variable/Classes names
                             BASIC = 513,    // Bundle of basic variables
                             ARRAY = 514,
-                            TEMP = 515;     // For temporal variables
+                            TEMP = 515,     // For temporal/intermediary variables
+                            INDEX = 512;    // For access to arrays (index)
 }

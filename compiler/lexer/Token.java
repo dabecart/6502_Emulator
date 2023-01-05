@@ -1,11 +1,20 @@
 package compiler.lexer;
 
 public class Token {
-    public final int tag;
+    public int tag;
+    private boolean isChar;
+
     public Token(int t){
-        tag = t;
+        this.tag = t;
+        this.isChar = false;
     }
+
+    public Token(char t){
+        this.tag = t;
+        this.isChar = true;
+    }
+
     public String toString(){
-        return Integer.toString(tag);
+        return isChar ? Character.toString((char)tag) : Integer.toString(tag);
     }
 }

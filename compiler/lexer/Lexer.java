@@ -1,66 +1,83 @@
 package compiler.lexer;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.Hashtable;
 
+import compiler.symbols.Type;
+
 public class Lexer {
     public static int line = 1;
-    public static char peek = ' ';
+    public char peek = ' ';
     public static Hashtable<String, Word> words = new Hashtable<>();
+
+    BufferedReader br;
+
+    public Lexer(BufferedReader br){
+        this.br = br;
+        for(Word w : Word.reservedWords){
+            putWord(w);
+        }
+        for(Word w : Type.reservedTypes){
+            putWord(w);
+        }
+    }
 
     public static void putWord(Word w){
         words.put(w.lexeme, w);
     }
 
-    private static void readChar() throws IOException{
-        peek = (char) System.in.read();
+    private void readChar() throws IOException{
+        peek = (char) br.read();
     }
 
-    private static boolean readChar(char c) throws IOException{
+    private boolean readChar(char c) throws IOException{
         readChar();
         if(peek != c) return false;
         peek = ' ';
-        return false;
+        return true;
     }
 
-    public static Token scan() throws IOException{
+    public Token scan() throws IOException{
         for(;;readChar()){
             // Ignore spaces and tabs
-            if(peek == ' ' ||peek == '\t') continue;
+            if(peek == ' ' || peek == '\t' || peek == '\r' /*Carriage return*/) continue;
             else if(peek == '\n') line++;
             else break;
         }
+
+        char peekSave = peek;
 
         // Takes care of double and single operators
         switch(peek){
             case '&':{
                 if(readChar('&')) return Word.and;
-                else return new Token(peek);
+                else return new Token(peekSave);
             }
 
             case '|':{
                 if(readChar('|')) return Word.or;
-                else return new Token(peek);
+                else return new Token(peekSave);
             }
 
             case '=':{
                 if(readChar('=')) return Word.eq;
-                else return new Token(peek);
+                else return new Token(peekSave);
             }
 
             case '!':{
                 if(readChar('=')) return Word.neq;
-                else return new Token(peek);
+                else return new Token(peekSave);
             }
 
             case '<':{
                 if(readChar('=')) return Word.leq;
-                else return new Token(peek);
+                else return new Token(peekSave);
             }
 
             case '>':{
                 if(readChar('=')) return Word.geq;
-                else return new Token(peek);
+                else return new Token(peekSave);
             }
         }
 

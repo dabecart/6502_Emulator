@@ -80,5 +80,9 @@
 			"lib/**/*.jar",
 			"java\\lib\\JSerialComm.jar"
 		]
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": []
 	}
 }

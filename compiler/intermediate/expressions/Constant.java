@@ -18,5 +18,9 @@ public class Constant extends Expression {
         True = new Constant(Word.True, Type.Bool),
         False = new Constant(Word.False, Type.Bool);
 
-    
+    public void jump(int trueLabel, int falseLabel){
+        if(this == True && trueLabel != 0) print("goto L" + trueLabel);
+        else if(this == False && falseLabel != 0) print("goto L" + falseLabel);
+    }
+
 }

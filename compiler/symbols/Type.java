@@ -1,5 +1,8 @@
 package compiler.symbols;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import compiler.lexer.Tag;
 import compiler.lexer.Word;
 
@@ -15,6 +18,12 @@ public class Type extends Word {
         Int = new Type("int", Tag.BASIC, 4),
         Char = new Type("char", Tag.BASIC, 1),
         Bool = new Type("bool", Tag.BASIC, 1);
+
+    public static final List<Type> reservedTypes = new ArrayList<Type>(){{
+        add(Int);
+        add(Char);
+        add(Bool);
+    }};
 
     public static boolean isNumber(Type p){
         return p == Type.Char || p == Type.Int;
