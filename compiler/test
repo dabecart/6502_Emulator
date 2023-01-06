@@ -1,8 +1,22 @@
 {
     /*pepe*/
     int i; int j ; int v; int x; int [100] a;
-    do{
-        if(j == 2) continue;
-        j = i+1;
-    }while(j < 100);
+    switch (i) {
+    case 0:{
+        i = 2;
+    }
+
+    case 1:{
+        j = j*2;
+        v = x-1;
+    }
+
+    case 3:{
+        j = j*3;
+    }
+
+    default:{
+        x = 1;
+    }
+    }
 }

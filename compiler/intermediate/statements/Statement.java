@@ -1,9 +1,21 @@
 package compiler.intermediate.statements;
 
 import compiler.intermediate.Node;
+import compiler.lexer.Tag;
 
 public class Statement extends Node {
-    public Statement(){}
+    // Saves the Tag of the function parenting this statement. Used for special 
+    // keywords like "break" and "continue" that must be inside loops, or "case" 
+    // inside switches.
+    public int parentingFunctionCall;
+    
+    public Statement(int parentFunctionTag){
+        this.parentingFunctionCall = parentFunctionTag;
+    }
+
+    public Statement(){
+        this.parentingFunctionCall = -1;
+    }
 
     public static Statement Null = new Statement();
 
@@ -14,4 +26,15 @@ public class Statement extends Node {
     // The ending label of the statement.
     public int savedAfterLabel = 0;
     public static Statement Enclosing = Statement.Null;
+
+    public boolean isLoopStatement(){
+        switch(parentingFunctionCall){
+            case Tag.WHILE:
+            case Tag.FOR:
+            case Tag.DO:{
+                return true;
+            }
+        }
+        return false;
+    }
 }

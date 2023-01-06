@@ -1,6 +1,7 @@
 package compiler.intermediate.statements;
 
 import compiler.intermediate.expressions.Expression;
+import compiler.lexer.Tag;
 import compiler.symbols.Type;
 
 public class DoWhile extends Statement{
@@ -8,8 +9,9 @@ public class DoWhile extends Statement{
     Statement statement;
 
     public DoWhile() {
-        expression = null;
-        statement = null;
+        this.parentingFunctionCall = Tag.DO;
+        this.expression = null;
+        this.statement = null;
     }
 
     public void start(Expression exp, Statement st){

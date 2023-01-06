@@ -19,6 +19,10 @@ public class Tag {
                             DO = 270,
                             BREAK = 271,
                             CONTINUE = 272,
+                            FOR = 273,
+                            SWITCH = 274,
+                            CASE = 275,
+                            DEFAULT = 276,
 
                             ID = 512,       // Variable/Classes names
                             BASIC = 513,    // Bundle of basic variables

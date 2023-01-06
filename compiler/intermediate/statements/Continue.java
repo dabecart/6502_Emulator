@@ -5,10 +5,10 @@ public class Continue extends Statement{
     Statement statement;
 
     public Continue(){
-        if(Statement.Enclosing == null){
+        if(!Statement.Enclosing.isLoopStatement()){
             error("Continue outside loop");
         }
-        statement = Statement.Enclosing;
+        this.statement = Statement.Enclosing;
     }
 
     public void generate(int beforeLabel, int afterLabel){

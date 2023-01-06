@@ -1,6 +1,7 @@
 package compiler.intermediate.statements;
 
 import compiler.intermediate.expressions.Expression;
+import compiler.lexer.Tag;
 import compiler.symbols.Type;
 
 public class While extends Statement{
@@ -13,6 +14,7 @@ public class While extends Statement{
     }
 
     public void start(Expression exp, Statement st){
+        this.parentingFunctionCall = Tag.FOR;
         this.expression = exp;
         this.statement = st;
         if(expression.type != Type.Bool){

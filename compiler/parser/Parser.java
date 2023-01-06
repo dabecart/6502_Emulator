@@ -13,6 +13,7 @@ import compiler.intermediate.operators.Arithmetic;
 import compiler.intermediate.operators.ArrayAccess;
 import compiler.intermediate.operators.Unary;
 import compiler.intermediate.statements.Break;
+import compiler.intermediate.statements.Case;
 import compiler.intermediate.statements.Continue;
 import compiler.intermediate.statements.DoWhile;
 import compiler.intermediate.statements.If;
@@ -21,6 +22,7 @@ import compiler.intermediate.statements.Set;
 import compiler.intermediate.statements.SetArray;
 import compiler.intermediate.statements.Statement;
 import compiler.intermediate.statements.StatementSequence;
+import compiler.intermediate.statements.Switch;
 import compiler.intermediate.statements.While;
 import compiler.lexer.Lexer;
 import compiler.lexer.Num;
@@ -201,6 +203,59 @@ public class Parser {
                 match(Tag.CONTINUE);
                 match(';');
                 return new Continue();
+            }
+
+            case Tag.SWITCH:{
+                Switch switchNode = new Switch();
+                savedStatement = Statement.Enclosing;
+                Statement.Enclosing = switchNode;
+
+                match(Tag.SWITCH);
+                match('(');
+                x = boolExpression();
+                match(')');
+
+                s1 = statement();
+                switchNode.start(x, s1);
+                Statement.Enclosing = savedStatement;
+                return switchNode;
+            }
+            
+            case Tag.CASE:{
+                match(Tag.CASE);
+                x = null;
+                switch(peekToken.tag){
+                    case Tag.NUM:{
+                        x = new Constant(peekToken, Type.Int);
+                        break;
+                    }
+
+                    case Tag.TRUE:{
+                        x = Constant.True;
+                        break;
+                    }
+        
+                    case Tag.FALSE:{
+                        x = Constant.False;
+                        break;
+                    }
+        
+                    default:{
+                        error("Case must be constant");
+                        break;
+                    }
+                }
+                move();
+                match(':');
+                s1 = statement();
+                return new Case((Constant) x, s1);
+            }
+
+            case Tag.DEFAULT:{
+                match(Tag.DEFAULT);
+                match(':');
+                s1 = statement();
+                return new Case(s1);
             }
 
             case '{':{

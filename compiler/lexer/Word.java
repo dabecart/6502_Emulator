@@ -37,6 +37,10 @@ public class Word extends Token{
         Do = new Word("do", Tag.DO),
         Break = new Word("break", Tag.BREAK),
         Continue = new Word("continue", Tag.CONTINUE),
+        For = new Word("for", Tag.FOR),
+        Switch = new Word("switch", Tag.SWITCH),
+        Case = new Word("case", Tag.CASE),
+        Default = new Word("default", Tag.DEFAULT),
 
         Temp = new Word("t", Tag.TEMP);
 
@@ -57,6 +61,10 @@ public class Word extends Token{
             add(Do);
             add(Break);
             add(Continue);
+            add(For);
+            add(Switch);
+            add(Case);
+            add(Default);
 
             add(Temp);
         }};
