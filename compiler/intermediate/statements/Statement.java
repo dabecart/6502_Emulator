@@ -9,6 +9,9 @@ public class Statement extends Node {
 
     public void generate(int beginLabel, int afterLabel){}
 
+    // The beginning label of the statement. Used for loops
+    public int savedBeforeLabel = 0;
+    // The ending label of the statement.
     public int savedAfterLabel = 0;
     public static Statement Enclosing = Statement.Null;
 }

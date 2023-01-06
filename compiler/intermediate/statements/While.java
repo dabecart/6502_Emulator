@@ -21,7 +21,8 @@ public class While extends Statement{
     }
 
     public void generate(int beforeLabel, int afterLabel){
-        savedAfterLabel = afterLabel;
+        this.savedBeforeLabel = beforeLabel;
+        this.savedAfterLabel = afterLabel;
         expression.jump(0, afterLabel);
         int label = newLabel();
         printLabel(label);

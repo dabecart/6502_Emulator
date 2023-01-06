@@ -79,6 +79,23 @@ public class Lexer {
                 if(readChar('=')) return Word.geq;
                 else return new Token(peekSave);
             }
+
+            case '/':{
+                readChar();
+                if(peek == '/') { // Skip a line with // comments
+                    br.readLine();    
+                    line++;
+                    return scan();
+                }else if(peek == '*') { // Skip a line with /* comments
+                    for(;;){
+                        readChar();
+                        if(peek == '\n') line++;
+                        else if(peek == '*'){
+                            if(readChar('/')) return scan();
+                        } 
+                    }
+                }
+            }
         }
 
         // Parse digits

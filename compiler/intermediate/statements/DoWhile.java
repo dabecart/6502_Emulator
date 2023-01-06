@@ -21,7 +21,8 @@ public class DoWhile extends Statement{
     }
 
     public void generate(int beforeLabel, int afterLabel){
-        savedAfterLabel = afterLabel;
+        this.savedBeforeLabel = beforeLabel;
+        this.savedAfterLabel = afterLabel;
         int label = newLabel();
         statement.generate(beforeLabel, label);
         printLabel(label);

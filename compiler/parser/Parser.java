@@ -13,6 +13,7 @@ import compiler.intermediate.operators.Arithmetic;
 import compiler.intermediate.operators.ArrayAccess;
 import compiler.intermediate.operators.Unary;
 import compiler.intermediate.statements.Break;
+import compiler.intermediate.statements.Continue;
 import compiler.intermediate.statements.DoWhile;
 import compiler.intermediate.statements.If;
 import compiler.intermediate.statements.IfElse;
@@ -194,6 +195,12 @@ public class Parser {
                 match(Tag.BREAK);
                 match(';');
                 return new Break();
+            }
+
+            case Tag.CONTINUE:{
+                match(Tag.CONTINUE);
+                match(';');
+                return new Continue();
             }
 
             case '{':{

@@ -18,6 +18,7 @@ public class Tag {
                             WHILE = 269,
                             DO = 270,
                             BREAK = 271,
+                            CONTINUE = 272,
 
                             ID = 512,       // Variable/Classes names
                             BASIC = 513,    // Bundle of basic variables

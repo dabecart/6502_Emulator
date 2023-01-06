@@ -36,6 +36,7 @@ public class Word extends Token{
         While = new Word("while", Tag.WHILE),
         Do = new Word("do", Tag.DO),
         Break = new Word("break", Tag.BREAK),
+        Continue = new Word("continue", Tag.CONTINUE),
 
         Temp = new Word("t", Tag.TEMP);
 
@@ -55,6 +56,7 @@ public class Word extends Token{
             add(While);
             add(Do);
             add(Break);
+            add(Continue);
 
             add(Temp);
         }};
