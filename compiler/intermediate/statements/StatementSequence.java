@@ -9,6 +9,8 @@ public class StatementSequence extends Statement {
     }
 
     public void generate(int beforeLabel, int afterLabel){
+        if(this == Null) return;
+        
         if(st1 == Statement.Null) st2.generate(beforeLabel, afterLabel);
         else if (st2 == Statement.Null) st1.generate(beforeLabel, afterLabel);
         else{
@@ -18,4 +20,7 @@ public class StatementSequence extends Statement {
             st2.generate(label, afterLabel);
         }
     }
+
+    public static final StatementSequence Null 
+    = new StatementSequence(Statement.Null, Statement.Null);
 }

@@ -8,6 +8,8 @@ import compiler.lexer.Lexer;
 import compiler.parser.Parser;
 
 public class Main {
+    static void boo(){}
+
     public static void main(String[] args) throws IOException{
         if(args.length == 0) {
             System.err.println("No input file found!");

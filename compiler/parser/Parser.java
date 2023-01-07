@@ -16,6 +16,7 @@ import compiler.intermediate.statements.Break;
 import compiler.intermediate.statements.Case;
 import compiler.intermediate.statements.Continue;
 import compiler.intermediate.statements.DoWhile;
+import compiler.intermediate.statements.For;
 import compiler.intermediate.statements.If;
 import compiler.intermediate.statements.IfElse;
 import compiler.intermediate.statements.Set;
@@ -80,29 +81,39 @@ public class Parser {
     // Declaration are made as:     D -> type ID;
     // For example,                 int variable;
     private Statement declarations() throws IOException{
-        Statement statement = null;
+        StatementSequence statement = StatementSequence.Null;
+        boolean declarationHasStatements = false;
 
-        while(statement == null && peekToken.tag == Tag.BASIC){
+        while(peekToken.tag == Tag.BASIC){
             Type p = type();
-            Token tok = peekToken;
-            match(Tag.ID);
 
-            Id id = new Id((Word)tok, p, usedDeclarations);
-            topEnviroment.addToken(tok, id);
-            usedDeclarations += p.byteSize;
+            // For declarations with comma i.e. int i,j,k=2;
+            boolean commaFound;
+            do{
+                commaFound = false;
 
-            if(peekToken.tag == '='){   // Variable assignment
-                move();
-                statement = new Set(id, boolExpression());
-            }else if(peekToken.tag == '['){  // Array
-                ArrayAccess x = arrayOffset(id);
-                match('=');
-                statement = new SetArray(x, boolExpression());
-            }
+                Token tok = peekToken;
+                match(Tag.ID);
+                Id id = new Id((Word)tok, p, usedDeclarations);
+                topEnviroment.addToken(tok, id);
+                usedDeclarations += p.byteSize;
 
+                if(peekToken.tag == '='){   // Variable assignment
+                    declarationHasStatements = true;
+                    move();
+                    statement = new StatementSequence(statement, new Set(id, boolExpression())); 
+                }else if(peekToken.tag == '['){  // Array
+                    declarationHasStatements = true;
+                    ArrayAccess x = arrayOffset(id);
+                    match('=');
+                    statement = new StatementSequence(statement, new SetArray(x, boolExpression())); 
+                }
+                commaFound = peekToken.tag == ',';
+                if(commaFound) move();
+            } while(commaFound);
             match(';');
         }
-        return statement;
+        return declarationHasStatements ? statement : null;
     }
     
     // Fetch the type of the declaration.
@@ -135,7 +146,7 @@ public class Parser {
         if(variableDeclaration != null) return variableDeclaration;
         
         Expression x;
-        Statement s1, s2;
+        Statement s1, s2, s3;
         Statement savedStatement;
 
         switch(peekToken.tag){
@@ -191,6 +202,40 @@ public class Parser {
                 dowhileNode.start(x, s1);
                 Statement.Enclosing = savedStatement;
                 return dowhileNode;
+            }
+
+            case Tag.FOR:{
+                For forLoopNode = new For();
+                savedStatement = Statement.Enclosing;
+                Statement.Enclosing = forLoopNode;
+
+                match(Tag.FOR);
+                match('(');
+                if(peekToken.tag == ';'){
+                    s1 = Statement.Null;
+                    match(';');
+                }else{
+                    s1 = declarations();
+                    if(s1 == null){
+                        s1 = assignValue();
+                    }
+                }
+
+                if(peekToken.tag != ';'){
+                    x = boolExpression();
+                }else{
+                    x = null;
+                }
+                match(';');
+                // The third parameter must be a SET function
+                s2 = assignValue();
+                match(')');
+
+                s3 = statement();
+
+                forLoopNode.start(s1, x, s2, s3);
+                Statement.Enclosing = savedStatement;
+                return forLoopNode;
             }
 
             case Tag.BREAK:{
@@ -263,7 +308,9 @@ public class Parser {
             }
 
             default:{
-                return assignValue(); 
+                s1 = assignValue();
+                match(';');
+                return s1;
             }
         }
     }
@@ -276,15 +323,19 @@ public class Parser {
         Id id = topEnviroment.getTokenId(tok);
         if(id == null) error(tok.toString() + " not declared");
 
-        if(peekToken.tag == '='){
-            move();
-            statement = new Set(id, boolExpression());
-        }else{  // Must be an array
+        if(peekToken.tag == '['){  // Array
             ArrayAccess x = arrayOffset(id);
             match('=');
             statement = new SetArray(x, boolExpression());
         }
-        match(';');
+
+        if(peekToken.tag == '='){
+            move();
+            statement = new Set(id, boolExpression());
+        } else{
+            error("Assign value error");
+            return null;
+        }
         return statement;
     }
 

@@ -1,22 +1,6 @@
 {
-    /*pepe*/
-    int i; int j ; int v; int x; int [100] a;
-    switch (i) {
-    case 0:{
-        i = 2;
-    }
-
-    case 1:{
-        j = j*2;
-        v = x-1;
-    }
-
-    case 3:{
-        j = j*3;
-    }
-
-    default:{
-        x = 1;
-    }
+    int i = 0, x;
+    for(;; i=i+1){
+        x = x+1;
     }
 }
