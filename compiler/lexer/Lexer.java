@@ -97,6 +97,11 @@ public class Lexer {
                 }else return new Token(peekSave);
             }
 
+            case '*':{
+                if(readChar('=')) return Word.multeq;
+                else return new Token(peekSave);
+            }
+
             case '/':{
                 readChar();
                 if(peek == '/') { // Skip a line with // comments
@@ -111,7 +116,15 @@ public class Lexer {
                             if(readChar('/')) return scan();
                         } 
                     }
-                }
+                }else if(peek == '='){
+                    readChar();
+                    return Word.diveq;
+                }else return new Token(peekSave);
+            }
+
+            case '%':{
+                if(readChar('=')) return Word.modeq;
+                else return new Token(peekSave);
             }
         }
 

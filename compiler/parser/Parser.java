@@ -19,6 +19,7 @@ import compiler.intermediate.statements.DoWhile;
 import compiler.intermediate.statements.For;
 import compiler.intermediate.statements.If;
 import compiler.intermediate.statements.IfElse;
+import compiler.intermediate.statements.OperationAndSet;
 import compiler.intermediate.statements.Set;
 import compiler.intermediate.statements.SetArray;
 import compiler.intermediate.statements.Statement;
@@ -87,13 +88,15 @@ public class Parser {
         while(peekToken.tag == Tag.BASIC){
             Type p = type();
 
-            // For declarations with comma i.e. int i,j,k=2;
             boolean commaFound;
-            do{
+            do{ // For declarations with comma i.e. int i,j,k=2;
                 commaFound = false;
 
                 Token tok = peekToken;
                 match(Tag.ID);
+                if(topEnviroment.getTokenId(tok) != null){
+                    error("Duplicate variable " + tok.toString());
+                }
                 Id id = new Id((Word)tok, p, usedDeclarations);
                 topEnviroment.addToken(tok, id);
                 usedDeclarations += p.byteSize;
@@ -319,41 +322,42 @@ public class Parser {
         boolean valueIsArray;
         ArrayAccess x = null;
 
-        if(peekToken.tag == Tag.INC || peekToken.tag == Tag.DEC){
-            Token operator = peekToken;
-            move();
-            Token variableName = peekToken;
-            match(Tag.ID);
-            Id id = topEnviroment.getTokenId(variableName);
-            if(id == null) error(peekToken.toString() + " not declared");
+        // Can be: ++ID aka. op ID  or ID = aka. ID op ...
+        Token tok1 = peekToken; 
+        move();
+        Token tok2 = peekToken;
+        move();
 
-            operator = new Token((operator.tag == Tag.INC) ? '+' : '-');
+        if(tok1.tag != Tag.ID){
+            Token temp = tok2;
+            tok2 = tok1;
+            tok1 = temp;
+        }
+
+        // tok1 stores the ID and tok2 the operand
+        Id id = topEnviroment.getTokenId(tok1);
+        if(id == null) error(tok1.toString() + " not declared");
+
+        if(tok2.tag == Tag.INC || tok2.tag == Tag.DEC){ // ++ID and --ID
+            Token operator = new Token((tok2.tag == Tag.INC) ? '+' : '-');
             Expression inc = new Arithmetic(operator, id, Constant.ONE);
             return new Set(id, inc);
-        }
-        
-        Token tok = peekToken;
-        match(Tag.ID);
-        Id id = topEnviroment.getTokenId(tok);
-        if(id == null) error(tok.toString() + " not declared");
+        } // else...
 
         if(valueIsArray = (peekToken.tag == '[')){  // Array
             x = arrayOffset(id);
         }
 
-        Token operateAndSetToken = peekToken;
-        move();
         Expression exp = boolExpression();
-
-        /*if(peekToken.tag != '='){ // Either is wrong or is an operate and set (+=, -=...)
-            exp = new Arithmetic(operateAndSetToken, id, exp);
-        }*/
-
-        if(valueIsArray){
-            return new SetArray(x, exp);
-        }else {
-            return new Set(id, exp);
-        }
+        if(tok2.tag == '='){ 
+            if(valueIsArray){
+                return new SetArray(x, exp);
+            }else {
+                return new Set(id, exp);
+            }
+        } // else...  Either is wrong or is an operate and set (+=, -=...)
+        
+        return new OperationAndSet(id,tok2,exp);
     }
 
     // Parsing of general expressions (starting with boolean OR firts)

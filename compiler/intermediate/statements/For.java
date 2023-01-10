@@ -1,6 +1,7 @@
 package compiler.intermediate.statements;
 
 import compiler.intermediate.expressions.Expression;
+import compiler.lexer.Tag;
 import compiler.symbols.Type;
 
 public class For extends Statement{
@@ -17,6 +18,7 @@ public class For extends Statement{
         this.condition = null;
         this.stepStatement = null;
         this.innerStatement = null;
+        this.parentingFunctionCall = Tag.FOR;
     }
 
     public void start(Statement initSt, Expression condition, Statement stepStatement, Statement innerStatement){
@@ -31,13 +33,17 @@ public class For extends Statement{
 
     public void generate(int beforeLabel, int afterLabel){
         initialStatement.generate(beforeLabel, afterLabel);
-        int innerLoopLabel = newLabel();
-        this.savedBeforeLabel = innerLoopLabel;
-        this.savedAfterLabel = afterLabel;
+        int innerLoopLabel = newLabel();    // After first statement of for loop
+        int continueLabel = newLabel();     // When continue is called, it executes the third param and goes to innerLoopLabel
+
+        this.continueLabel = continueLabel;
+        this.breakLabel = afterLabel;
+
         printLabel(innerLoopLabel);
         innerStatement.generate(innerLoopLabel, afterLabel);
-        int endLoopLabel = newLabel();
-        stepStatement.generate(endLoopLabel, afterLabel);
+        
+        printLabel(continueLabel);
+        stepStatement.generate(0, 0);
 
         if(condition == null) print("goto L" + innerLoopLabel);
         else condition.jump(innerLoopLabel, 0);

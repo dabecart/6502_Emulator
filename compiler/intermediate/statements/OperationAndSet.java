@@ -1,9 +1,12 @@
 package compiler.intermediate.statements;
 
 import compiler.intermediate.Id;
+import compiler.intermediate.expressions.Constant;
 import compiler.intermediate.expressions.Expression;
+import compiler.intermediate.operators.Arithmetic;
 import compiler.lexer.Tag;
 import compiler.lexer.Token;
+import compiler.lexer.Word;
 import compiler.symbols.Type;
 
 // OperationAndSet implements an ID on the left side followed by an 
@@ -16,14 +19,17 @@ public class OperationAndSet extends Statement {
     public OperationAndSet(Id i, Token operator, Expression exp){
         this.id = i;
         this.operator = operator;
+        if(!isOperatorAndEqual()){
+            error("Unrecognised operator " + operator.toString());
+        }
         this.expression = exp;
         if(checkType(id.type, exp.type) == null){
             error("Type error");
         }
     }
 
-    public static boolean isOperatorAndEqual(Token tok){
-        int tag = tok.tag;
+    public boolean isOperatorAndEqual(){
+        int tag = this.operator.tag;
         return tag == Tag.ADDEQ || tag == Tag.SUBEQ || tag == Tag.MULTEQ || tag == Tag.DIVEQ || tag == Tag.MODEQ;
     }
 
@@ -34,6 +40,16 @@ public class OperationAndSet extends Statement {
     }
 
     public void generate(int beforeLabel, int afterLabel){
-        print(id.toString() + " = " + expression.generate().toString());
+        char operation = 0;
+        switch(operator.tag){
+            case Tag.ADDEQ: {operation = '+'; break;}
+            case Tag.SUBEQ: {operation = '-'; break;}
+            case Tag.MULTEQ:{operation = '*'; break;}
+            case Tag.DIVEQ: {operation = '/'; break;}
+            case Tag.MODEQ: {operation = '%'; break;}
+        }
+        Expression op = new Arithmetic(new Token(operation), id, expression);
+        Set set = new Set(id, op);
+        set.generate(beforeLabel, afterLabel);
     }
 }

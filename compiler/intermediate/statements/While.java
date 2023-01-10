@@ -23,8 +23,8 @@ public class While extends Statement{
     }
 
     public void generate(int beforeLabel, int afterLabel){
-        this.savedBeforeLabel = beforeLabel;
-        this.savedAfterLabel = afterLabel;
+        this.continueLabel = beforeLabel;
+        this.breakLabel = afterLabel;
         expression.jump(0, afterLabel);
         int label = newLabel();
         printLabel(label);

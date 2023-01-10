@@ -12,7 +12,7 @@ public class Continue extends Statement{
     }
 
     public void generate(int beforeLabel, int afterLabel){
-        print("goto L" + statement.savedBeforeLabel);
+        print("goto L" + statement.continueLabel);
     }
     
 }

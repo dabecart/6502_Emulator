@@ -28,7 +28,7 @@ public class Switch extends Statement{
     }
 
     public void generate(int beforeLabel, int afterLabel){
-        this.savedAfterLabel = afterLabel;
+        this.breakLabel = afterLabel;
 
         int testLabel = newLabel();
         String switchVariable = expression.reduce().toString();

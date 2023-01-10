@@ -1,6 +1,8 @@
 {
-    int i = 0, x;
-    for(;; --i)
-        x = x+1;
+    int x=2;
+    for(int i = 2;; ++i) {
+        if(x < 10) continue;
+        if(i > 100) break;
+        x %= 7*2;
     }
 }
