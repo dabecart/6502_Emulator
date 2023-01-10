@@ -39,7 +39,8 @@ public class For extends Statement{
         int endLoopLabel = newLabel();
         stepStatement.generate(endLoopLabel, afterLabel);
 
-        if(condition != null) condition.jump(innerLoopLabel, 0);
+        if(condition == null) print("goto L" + innerLoopLabel);
+        else condition.jump(innerLoopLabel, 0);
     }
 
 }

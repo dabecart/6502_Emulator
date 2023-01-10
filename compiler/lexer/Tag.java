@@ -24,6 +24,14 @@ public class Tag {
                             CASE = 275,
                             DEFAULT = 276,
 
+                            ADDEQ = 277,    // +=
+                            SUBEQ = 278,    // -=
+                            MULTEQ = 279,   // *=
+                            DIVEQ = 280,    // /=
+                            MODEQ = 281,    // %=
+                            INC = 282,      // ++
+                            DEC = 283,      // --
+
                             ID = 512,       // Variable/Classes names
                             BASIC = 513,    // Bundle of basic variables
                             ARRAY = 514,

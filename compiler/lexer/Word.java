@@ -42,6 +42,14 @@ public class Word extends Token{
         Case = new Word("case", Tag.CASE),
         Default = new Word("default", Tag.DEFAULT),
 
+        addeq = new Word("+=", Tag.ADDEQ),
+        subeq = new Word("-=", Tag.SUBEQ),
+        multeq = new Word("*=", Tag.MULTEQ),
+        diveq = new Word("/=", Tag.DIVEQ),
+        modeq = new Word("%=", Tag.MODEQ),
+        inc = new Word("++", Tag.INC),
+        dec = new Word("--", Tag.DEC),
+
         Temp = new Word("t", Tag.TEMP);
 
         static final List<Word> reservedWords = new ArrayList<Word>(){{
@@ -65,6 +73,14 @@ public class Word extends Token{
             add(Switch);
             add(Case);
             add(Default);
+
+            add(addeq);
+            add(subeq);
+            add(multeq);
+            add(diveq);
+            add(modeq);
+            add(inc);
+            add(dec);
 
             add(Temp);
         }};

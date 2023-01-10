@@ -1,9 +1,9 @@
 package compiler.intermediate.statements;
 
-public class StatementSequence extends Statement {
+public class StatementBundle extends Statement {
     Statement st1, st2;
 
-    public StatementSequence(Statement st1, Statement st2){
+    public StatementBundle(Statement st1, Statement st2){
         this.st1 = st1;
         this.st2 = st2;
     }
@@ -21,6 +21,6 @@ public class StatementSequence extends Statement {
         }
     }
 
-    public static final StatementSequence Null 
-    = new StatementSequence(Statement.Null, Statement.Null);
+    public static final StatementBundle Null 
+    = new StatementBundle(Statement.Null, Statement.Null);
 }

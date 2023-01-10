@@ -22,7 +22,7 @@ import compiler.intermediate.statements.IfElse;
 import compiler.intermediate.statements.Set;
 import compiler.intermediate.statements.SetArray;
 import compiler.intermediate.statements.Statement;
-import compiler.intermediate.statements.StatementSequence;
+import compiler.intermediate.statements.StatementBundle;
 import compiler.intermediate.statements.Switch;
 import compiler.intermediate.statements.While;
 import compiler.lexer.Lexer;
@@ -81,7 +81,7 @@ public class Parser {
     // Declaration are made as:     D -> type ID;
     // For example,                 int variable;
     private Statement declarations() throws IOException{
-        StatementSequence statement = StatementSequence.Null;
+        StatementBundle statement = StatementBundle.Null;
         boolean declarationHasStatements = false;
 
         while(peekToken.tag == Tag.BASIC){
@@ -101,12 +101,12 @@ public class Parser {
                 if(peekToken.tag == '='){   // Variable assignment
                     declarationHasStatements = true;
                     move();
-                    statement = new StatementSequence(statement, new Set(id, boolExpression())); 
+                    statement = new StatementBundle(statement, new Set(id, boolExpression())); 
                 }else if(peekToken.tag == '['){  // Array
                     declarationHasStatements = true;
                     ArrayAccess x = arrayOffset(id);
                     match('=');
-                    statement = new StatementSequence(statement, new SetArray(x, boolExpression())); 
+                    statement = new StatementBundle(statement, new SetArray(x, boolExpression())); 
                 }
                 commaFound = peekToken.tag == ',';
                 if(commaFound) move();
@@ -136,7 +136,7 @@ public class Parser {
 
     private Statement statements() throws IOException{
         if(peekToken.tag == '}') return Statement.Null;
-        else return new StatementSequence(statement(), statements());
+        else return new StatementBundle(statement(), statements());
     }
 
     private Statement statement() throws IOException{
@@ -316,27 +316,44 @@ public class Parser {
     }
 
     private Statement assignValue() throws IOException{
-        Statement statement;
-        Token tok = peekToken;
+        boolean valueIsArray;
+        ArrayAccess x = null;
+
+        if(peekToken.tag == Tag.INC || peekToken.tag == Tag.DEC){
+            Token operator = peekToken;
+            move();
+            Token variableName = peekToken;
+            match(Tag.ID);
+            Id id = topEnviroment.getTokenId(variableName);
+            if(id == null) error(peekToken.toString() + " not declared");
+
+            operator = new Token((operator.tag == Tag.INC) ? '+' : '-');
+            Expression inc = new Arithmetic(operator, id, Constant.ONE);
+            return new Set(id, inc);
+        }
         
+        Token tok = peekToken;
         match(Tag.ID);
         Id id = topEnviroment.getTokenId(tok);
         if(id == null) error(tok.toString() + " not declared");
 
-        if(peekToken.tag == '['){  // Array
-            ArrayAccess x = arrayOffset(id);
-            match('=');
-            statement = new SetArray(x, boolExpression());
+        if(valueIsArray = (peekToken.tag == '[')){  // Array
+            x = arrayOffset(id);
         }
 
-        if(peekToken.tag == '='){
-            move();
-            statement = new Set(id, boolExpression());
-        } else{
-            error("Assign value error");
-            return null;
+        Token operateAndSetToken = peekToken;
+        move();
+        Expression exp = boolExpression();
+
+        /*if(peekToken.tag != '='){ // Either is wrong or is an operate and set (+=, -=...)
+            exp = new Arithmetic(operateAndSetToken, id, exp);
+        }*/
+
+        if(valueIsArray){
+            return new SetArray(x, exp);
+        }else {
+            return new Set(id, exp);
         }
-        return statement;
     }
 
     // Parsing of general expressions (starting with boolean OR firts)
@@ -398,10 +415,9 @@ public class Parser {
         return x;
     }
 
-    // Fetches the term of the operation (+,-,*,/)
     private Expression term() throws IOException{
         Expression x = unary();
-        while(peekToken.tag == '*' || peekToken.tag == '/'){
+        while(peekToken.tag == '*' || peekToken.tag == '/' || peekToken.tag == '%'){
             Token tok = peekToken;
             move();
             x = new Arithmetic(tok, x, unary());

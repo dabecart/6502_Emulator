@@ -48,7 +48,7 @@ public class Lexer {
 
         char peekSave = peek;
 
-        // Takes care of double and single operators
+        // Takes care of double operators
         switch(peek){
             case '&':{
                 if(readChar('&')) return Word.and;
@@ -78,6 +78,23 @@ public class Lexer {
             case '>':{
                 if(readChar('=')) return Word.geq;
                 else return new Token(peekSave);
+            }
+
+            case '+':{
+                if(readChar('=')) return Word.addeq;
+                if(peek == '+'){
+                    readChar();
+                    return Word.inc;
+                }
+                else return new Token(peekSave);
+            }
+            
+            case '-':{
+                if(readChar('=')) return Word.subeq;
+                if(peek == '-'){
+                    readChar();
+                    return Word.dec;
+                }else return new Token(peekSave);
             }
 
             case '/':{

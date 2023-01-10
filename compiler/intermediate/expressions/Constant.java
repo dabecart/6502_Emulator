@@ -6,6 +6,9 @@ import compiler.lexer.Word;
 import compiler.symbols.Type;
 
 public class Constant extends Expression {
+
+    public static final Constant ONE = new Constant(1);
+
     public Constant(Token tok, Type type){
         super(tok, type);
     }
