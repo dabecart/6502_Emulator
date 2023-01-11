@@ -3,6 +3,11 @@ package compiler.intermediate.three_address;
 import java.util.ArrayList;
 import java.util.List;
 
+import compiler.code_generator.instructions.AssignInstruction;
+import compiler.code_generator.instructions.ConditionalInstruction;
+import compiler.code_generator.instructions.JumpInstruction;
+import compiler.code_generator.instructions.OperateInstruction;
+import compiler.code_generator.instructions.UnaryInstruction;
 import compiler.intermediate.expressions.Expression;
 
 public class Intermediate {
@@ -16,12 +21,23 @@ public class Intermediate {
     }
 
     public static void add(Quadruple quad){
+        quad = setQuadrupleSubClass(quad);
         intermediateCode.add(quad);
     }
 
     public static void setOperation(int op){
         if(currentQuad.op != -1) throw new Error("Operation already set");
-        currentQuad.op = op; 
+        currentQuad.op = op;
+        currentQuad = setQuadrupleSubClass(currentQuad);
+    }
+
+    public static Quadruple setQuadrupleSubClass(Quadruple quad){
+        if(AssignInstruction.checkOperator(quad.op)) return new AssignInstruction(quad);
+        if(ConditionalInstruction.checkOperator(quad.op)) return new ConditionalInstruction(quad);
+        if(JumpInstruction.checkOperator(quad.op)) return new JumpInstruction(quad);
+        if(OperateInstruction.checkOperator(quad.op)) return new OperateInstruction(quad);
+        if(UnaryInstruction.checkOperator(quad.op)) return new UnaryInstruction(quad);
+        return quad;
     }
 
     public static void setLabel(int label){
@@ -46,21 +62,8 @@ public class Intermediate {
 
     public static void printAll(){
         System.out.println("\n*******************************************************");
-        for(Quadruple q : intermediateCode){
-            if(q.label != null){
-                for(int i : q.label){
-                    System.out.print("L" + i + ":");
-                }
-            }
-            System.out.print("\t");
-
-            if(q.arg1 != null)System.out.print(q.arg1.toString());
-            if(q.arg2 != null) System.out.print(", " + q.arg2.toString());
-            System.out.print(" -(");
-            if(q.op < 255) System.out.print((char) q.op);
-            else System.out.print(q.op);
-            System.out.println(")- " + q.result.toString());
-        }
+        for(Quadruple q : intermediateCode) System.out.println(q);
     }
+
     
 }

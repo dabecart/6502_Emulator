@@ -9,7 +9,7 @@ public class SystemOperators {
                             MUL = '*',
                             DIV = '/',
                             MOD = '%',
-                            MINUS = Tag.MINUS,
+                            NEG = Tag.MINUS,
 
                             SET = '=',
 
@@ -19,15 +19,17 @@ public class SystemOperators {
                             OR = '|',
                             XOR = '^',
 
-                            // Conditional jump operators
-                            // if op1 condOp op2 goto result
+                            // Boolean operators
                             lAND = Tag.AND, // Logical AND &&
                             lOR = Tag.OR,   // Logical OR ||
                             EQ = Tag.EQUAL,
                             NEQ = Tag.NEQUAL,
                             GEQ = Tag.GEQUAL,
                             LEQ = Tag.LEQUAL,
+                            LES = '<',
+                            GRE = '>',
 
+                            // Conditional jump
                             IF = Tag.IF,    // if op1 goto result
                             IFNOT = Tag.ELSE,
 

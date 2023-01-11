@@ -6,6 +6,14 @@
     "configurations": [
         {
             "type": "java",
+            "name": "Launch Main",
+            "request": "launch",
+            "mainClass": "compiler.Main",
+            "projectName": "6502_Emulator_64cf608d",
+            "args": "C:\\Users\\dbeja\\Documents\\PlatformIO\\Projects\\6502_Emulator\\compiler\\test"
+        },
+        {
+            "type": "java",
             "name": "Launch Current File",
             "request": "launch",
             "mainClass": "${file}"
