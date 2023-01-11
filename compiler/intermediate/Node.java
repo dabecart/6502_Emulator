@@ -1,5 +1,8 @@
 package compiler.intermediate;
 
+import compiler.code_generator.SystemOperators;
+import compiler.intermediate.three_address.Intermediate;
+import compiler.intermediate.three_address.Label;
 import compiler.lexer.Lexer;
 
 public class Node {
@@ -20,6 +23,14 @@ public class Node {
 
     public void printLabel(int labelNumber){
         System.out.print("L" + labelNumber + ":");
+        Intermediate.setLabel(labelNumber);
+    }
+
+    public void gotoLabel(int labelNumber){
+        Intermediate.setOperation(SystemOperators.GOTO);
+        Intermediate.setResult(new Label(labelNumber));
+        Intermediate.next();
+        System.out.println("\tgoto L" + labelNumber);
     }
 
     public void print(String s){

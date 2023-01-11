@@ -1,6 +1,9 @@
 package compiler.intermediate.expressions.logical;
 
 import compiler.intermediate.expressions.Expression;
+import compiler.intermediate.expressions.TemporalExpression;
+import compiler.intermediate.three_address.Intermediate;
+import compiler.intermediate.three_address.Quadruple;
 import compiler.lexer.Token;
 import compiler.symbols.Array;
 import compiler.symbols.Type;
@@ -19,6 +22,12 @@ public class Comparator extends Logical {
     public void jump(int trueLabel, int falseLabel){
         Expression a = exp1.reduce();
         Expression b = exp2.reduce();
+
+        TemporalExpression t = new TemporalExpression(Type.Bool);
+        Quadruple quad = new Quadruple(op.tag, a, b, t);
+        Intermediate.add(quad);
+
+        Intermediate.setArgs(t, null);
 
         String testStr = a.toString() + " " + op.toString() + " " + b.toString();
         printJump(testStr, trueLabel, falseLabel);

@@ -45,7 +45,7 @@ public class For extends Statement{
         printLabel(continueLabel);
         stepStatement.generate(0, 0);
 
-        if(condition == null) print("goto L" + innerLoopLabel);
+        if(condition == null) gotoLabel(innerLoopLabel);
         else condition.jump(innerLoopLabel, 0);
     }
 

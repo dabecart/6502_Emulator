@@ -52,11 +52,22 @@ public class Lexer {
         switch(peek){
             case '&':{
                 if(readChar('&')) return Word.and;
-                else return new Token(peekSave);
+                else if(peek == '='){
+                    readChar();
+                    return Word.andeq;
+                }else return new Token(peekSave);
             }
 
             case '|':{
                 if(readChar('|')) return Word.or;
+                else if(peek == '='){
+                    readChar();
+                    return Word.oreq;
+                }else return new Token(peekSave);
+            }
+
+            case '^':{
+                if(readChar('=')) return Word.xoreq;
                 else return new Token(peekSave);
             }
 
@@ -135,6 +146,15 @@ public class Lexer {
                 num = 10*num + Character.digit(peek, 10);
                 readChar();
             }while(Character.isDigit(peek));
+
+            if(num == 0 && peek == 'x'){    // Base 16
+                readChar();
+                do{
+                    num = 16*num + Character.digit(peek, 16);
+                    readChar();
+                }while(Character.isDigit(peek) || (peek >= 'A' && peek <= 'F') || (peek >= 'a' && peek <= 'f'));
+            }
+
             return new Num(num);
             // If double were to be added, they would be done here.
         }
@@ -144,7 +164,7 @@ public class Lexer {
             do{
                 strbuff.append(peek);
                 readChar();
-            }while(Character.isLetter(peek));
+            }while(Character.isLetter(peek) || Character.isDigit(peekSave));
 
             String s = strbuff.toString();
             Word w = words.get(s);

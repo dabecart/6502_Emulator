@@ -48,12 +48,12 @@ public class Parser {
     }
 
     private void error(String message){
-        throw new Error("Error in line " + Lexer.line + ": " + message);
+        throw new Error(message + " (Line " + Lexer.line + ") ");
     }
 
     private void match(int c) throws IOException{
         if(peekToken.tag == c) move();
-        else error("syntax error");
+        else error("Syntax error: expected '" + Character.toString((char)c) + "', found '" + peekToken.toString() + "'");
     }
 
     private void move() throws IOException{
@@ -393,7 +393,7 @@ public class Parser {
     }
 
     private Expression comparativeExpression() throws IOException{
-        Expression x = expression();
+        Expression x = logicalExpression();
         switch(peekToken.tag){
             case '<':
             case Tag.LEQUAL:
@@ -401,12 +401,22 @@ public class Parser {
             case '>':{
                 Token tok = peekToken;
                 move();
-                return new Comparator(tok, x, expression());
+                return new Comparator(tok, x, logicalExpression());
             }
             default:{
                 return x;
             }
         }
+    }
+
+    private Expression logicalExpression() throws IOException{
+        Expression x = expression();
+        while(peekToken.tag == '|' || peekToken.tag == '&' || peekToken.tag == '^'){
+            Token tok = peekToken;
+            move();
+            x = new Arithmetic(tok, x, expression());
+        }
+        return x;
     }
 
     private Expression expression() throws IOException{
@@ -433,6 +443,9 @@ public class Parser {
         if(peekToken.tag == '-'){
             move();
             return new Unary(Word.minus, unary());
+        }else if(peekToken.tag == '~'){
+            move();
+            return new Unary(new Token('~'), unary());
         }else if(peekToken.tag == '!'){
             Token tok = peekToken;
             move();

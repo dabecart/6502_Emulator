@@ -17,7 +17,7 @@ public class Break extends Statement{
     }
 
     public void generate(int beforeLabel, int afterLabel){
-        print("goto L" + statement.breakLabel);
+        gotoLabel(statement.breakLabel);
     }
     
 }

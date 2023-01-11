@@ -27,7 +27,7 @@ public class Logical extends Expression {
         TemporalExpression branchOutput = new TemporalExpression(type);
         this.jump(0, fromLabel);
         print(branchOutput.toString() + " = true");
-        print("goto L"+toLabel);
+        gotoLabel(toLabel);
         
         printLabel(fromLabel);
         print(branchOutput.toString() + " = false");

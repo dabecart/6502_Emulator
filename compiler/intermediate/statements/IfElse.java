@@ -23,7 +23,7 @@ public class IfElse extends Statement {
         
         printLabel(label1);
         statement1.generate(label1, afterLabel);
-        print("goto L" + afterLabel);   // End of if statement, jump to end of else
+        gotoLabel(afterLabel);   // End of if statement, jump to end of else
         
         printLabel(label2);
         statement2.generate(label2, afterLabel);

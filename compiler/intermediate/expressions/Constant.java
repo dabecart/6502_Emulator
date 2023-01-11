@@ -7,7 +7,10 @@ import compiler.symbols.Type;
 
 public class Constant extends Expression {
 
-    public static final Constant ONE = new Constant(1);
+    public static final Constant 
+        True = new Constant(Word.True, Type.Bool),
+        False = new Constant(Word.False, Type.Bool),
+        ONE = new Constant(1);
 
     public Constant(Token tok, Type type){
         super(tok, type);
@@ -17,13 +20,9 @@ public class Constant extends Expression {
         super(new Num(num), Type.Int);
     }
 
-    public static final Constant 
-        True = new Constant(Word.True, Type.Bool),
-        False = new Constant(Word.False, Type.Bool);
-
     public void jump(int trueLabel, int falseLabel){
-        if(this == True && trueLabel != 0) print("goto L" + trueLabel);
-        else if(this == False && falseLabel != 0) print("goto L" + falseLabel);
+        if(this == True && trueLabel != 0) gotoLabel(trueLabel);
+        else if(this == False && falseLabel != 0) gotoLabel(falseLabel);
     }
 
 }

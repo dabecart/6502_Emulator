@@ -49,6 +49,9 @@ public class Word extends Token{
         modeq = new Word("%=", Tag.MODEQ),
         inc = new Word("++", Tag.INC),
         dec = new Word("--", Tag.DEC),
+        andeq = new Word("&=", Tag.ANDEQ),
+        oreq = new Word("|=", Tag.OREQ),
+        xoreq = new Word("^=", Tag.XOREQ),
 
         Temp = new Word("t", Tag.TEMP);
 

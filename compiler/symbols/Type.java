@@ -17,7 +17,8 @@ public class Type extends Word {
     public static final Type 
         Int = new Type("int", Tag.BASIC, 4),
         Char = new Type("char", Tag.BASIC, 1),
-        Bool = new Type("bool", Tag.BASIC, 1);
+        Bool = new Type("bool", Tag.BASIC, 1),
+        Label = new Type("L", Tag.LABEL, 0);
 
     public static final List<Type> reservedTypes = new ArrayList<Type>(){{
         add(Int);

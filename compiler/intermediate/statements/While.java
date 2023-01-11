@@ -29,6 +29,6 @@ public class While extends Statement{
         int label = newLabel();
         printLabel(label);
         statement.generate(beforeLabel, label);
-        print("goto L" + beforeLabel);
+        gotoLabel(beforeLabel);
     }
 }

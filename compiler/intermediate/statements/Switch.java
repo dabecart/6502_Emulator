@@ -32,7 +32,7 @@ public class Switch extends Statement{
 
         int testLabel = newLabel();
         String switchVariable = expression.reduce().toString();
-        print("goto L" + testLabel); // Go to test condition area
+        gotoLabel(testLabel); // Go to test condition area
         statement.generate(beforeLabel, afterLabel);
         printLabel(testLabel);
         
@@ -41,7 +41,7 @@ public class Switch extends Statement{
             print("case " + switchVariable + " " + entry.getKey().toString() + " L" + entry.getValue());
         }
         if(defaultCase != 0){
-            print("goto L" + defaultCase);
+            gotoLabel(defaultCase);
         }
     }
 

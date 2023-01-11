@@ -2,6 +2,7 @@ package compiler.intermediate.statements;
 
 import compiler.intermediate.Id;
 import compiler.intermediate.expressions.Expression;
+import compiler.intermediate.three_address.Intermediate;
 import compiler.symbols.Type;
 
 // Set implements an ID on the left side followed by an equal and an expression
@@ -25,6 +26,14 @@ public class Set extends Statement {
     }
 
     public void generate(int beforeLabel, int afterLabel){
-        print(id.toString() + " = " + expression.generate().toString());
+        Expression red_exp = expression.generate();
+        print(id.toString() + " = " + red_exp.toString());
+        Intermediate.setResult(id);
+        // If no operation is done, then its a copy sentence.
+        if(Intermediate.currentQuad.op == -1){
+            Intermediate.setOperation('=');
+            Intermediate.setArgs(red_exp, null);
+        }
+        Intermediate.next();
     }
 }

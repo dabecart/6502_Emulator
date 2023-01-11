@@ -9,6 +9,7 @@ public class Unary extends Operator {
 
     public Unary(Token tok, Expression exp){
         super(tok, null);
+        this.exp = exp;
         type = Type.typeConversion(Type.Int, exp.type);
         if(type == null) error("Type conversion error");
     }

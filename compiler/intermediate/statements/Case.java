@@ -34,7 +34,7 @@ public class Case extends Statement{
     public void generate(int beforeLabel, int afterLabel){
         parentSwitch.addCase(constant);
         statement.generate(beforeLabel, afterLabel);
-        print("goto L" + afterLabel); // Exit the switch
+        gotoLabel(afterLabel); // Exit the switch
     }
 
 }
