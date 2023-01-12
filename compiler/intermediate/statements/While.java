@@ -1,6 +1,7 @@
 package compiler.intermediate.statements;
 
 import compiler.intermediate.expressions.Expression;
+import compiler.intermediate.three_address.Label;
 import compiler.lexer.Tag;
 import compiler.symbols.Type;
 
@@ -22,11 +23,11 @@ public class While extends Statement{
         }
     }
 
-    public void generate(int beforeLabel, int afterLabel){
+    public void generate(Label beforeLabel, Label afterLabel){
         this.continueLabel = beforeLabel;
         this.breakLabel = afterLabel;
-        expression.jump(0, afterLabel);
-        int label = newLabel();
+        expression.jump(null, afterLabel);
+        Label label = newLabel();
         printLabel(label);
         statement.generate(beforeLabel, label);
         gotoLabel(beforeLabel);

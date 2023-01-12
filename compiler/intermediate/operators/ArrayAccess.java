@@ -2,6 +2,7 @@ package compiler.intermediate.operators;
 
 import compiler.intermediate.Id;
 import compiler.intermediate.expressions.Expression;
+import compiler.intermediate.three_address.Label;
 import compiler.lexer.Tag;
 import compiler.lexer.Word;
 import compiler.symbols.Type;
@@ -21,7 +22,7 @@ public class ArrayAccess extends Operator {
         return new ArrayAccess(array, index.reduce(), type);
     }
 
-    public void jump(int trueLabel, int falseLabel){
+    public void jump(Label trueLabel, Label falseLabel){
         printJump(reduce().toString(), trueLabel, falseLabel);
     }
 

@@ -1,5 +1,7 @@
 package compiler.intermediate.statements;
 
+import compiler.intermediate.three_address.Label;
+
 public class StatementBundle extends Statement {
     Statement st1, st2;
 
@@ -8,13 +10,13 @@ public class StatementBundle extends Statement {
         this.st2 = st2;
     }
 
-    public void generate(int beforeLabel, int afterLabel){
+    public void generate(Label beforeLabel, Label afterLabel){
         if(this == Null) return;
         
         if(st1 == Statement.Null) st2.generate(beforeLabel, afterLabel);
         else if (st2 == Statement.Null) st1.generate(beforeLabel, afterLabel);
         else{
-            int label = newLabel();
+            Label label = newLabel();
             st1.generate(beforeLabel, label);
             printLabel(label);
             st2.generate(label, afterLabel);

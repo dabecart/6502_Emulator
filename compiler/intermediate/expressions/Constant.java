@@ -1,5 +1,6 @@
 package compiler.intermediate.expressions;
 
+import compiler.intermediate.three_address.Label;
 import compiler.lexer.Num;
 import compiler.lexer.Token;
 import compiler.lexer.Word;
@@ -20,9 +21,9 @@ public class Constant extends Expression {
         super(new Num(num), Type.Int);
     }
 
-    public void jump(int trueLabel, int falseLabel){
-        if(this == True && trueLabel != 0) gotoLabel(trueLabel);
-        else if(this == False && falseLabel != 0) gotoLabel(falseLabel);
+    public void jump(Label trueLabel, Label falseLabel){
+        if(this == True && trueLabel != null) gotoLabel(trueLabel);
+        else if(this == False && falseLabel != null) gotoLabel(falseLabel);
     }
 
 }

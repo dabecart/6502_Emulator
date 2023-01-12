@@ -7,6 +7,7 @@ import compiler.symbols.Type;
 public class Label extends Expression{
     
     public int label;
+    public int occurrences = 0;
 
     public Label(int label){
         super(new Token(label), Type.Label);

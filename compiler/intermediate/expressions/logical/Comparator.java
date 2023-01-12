@@ -3,6 +3,7 @@ package compiler.intermediate.expressions.logical;
 import compiler.intermediate.expressions.Expression;
 import compiler.intermediate.expressions.TemporalExpression;
 import compiler.intermediate.three_address.Intermediate;
+import compiler.intermediate.three_address.Label;
 import compiler.intermediate.three_address.Quadruple;
 import compiler.lexer.Token;
 import compiler.symbols.Array;
@@ -19,7 +20,7 @@ public class Comparator extends Logical {
         else return null;
     }
 
-    public void jump(int trueLabel, int falseLabel){
+    public void jump(Label trueLabel, Label falseLabel){
         Expression a = exp1.reduce();
         Expression b = exp2.reduce();
 

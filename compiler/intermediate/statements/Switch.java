@@ -18,9 +18,9 @@ public class Switch extends Statement{
     Expression expression;
     Statement statement;
 
-    int defaultCase = 0;
+    Label defaultCase;
 
-    public Hashtable<Constant, Integer> cases = new Hashtable<>();
+    public Hashtable<Constant, Label> cases = new Hashtable<>();
 
     public Switch() {
         this.parentingFunctionCall = Tag.SWITCH;
@@ -33,33 +33,33 @@ public class Switch extends Statement{
         this.statement = st;
     }
 
-    public void generate(int beforeLabel, int afterLabel){
+    public void generate(Label beforeLabel, Label afterLabel){
         this.breakLabel = afterLabel;
 
-        int testLabel = newLabel();
+        Label testLabel = newLabel();
 
         Expression switchVariable = expression.reduce();
         gotoLabel(testLabel); // Go to test condition area
         statement.generate(beforeLabel, afterLabel);
         printLabel(testLabel);
         
-        Set<Entry<Constant, Integer>> entries = cases.entrySet();
-        for(Entry<Constant, Integer> entry : entries){
+        Set<Entry<Constant, Label>> entries = cases.entrySet();
+        for(Entry<Constant, Label> entry : entries){
             TemporalExpression t = new TemporalExpression(Type.Bool);
             Quadruple q1 = new Quadruple(SystemOperators.EQ, switchVariable, entry.getKey(), t);
-            Quadruple q2 = new Quadruple(SystemOperators.IF, t, null, new Label(entry.getValue()));
+            Quadruple q2 = new Quadruple(SystemOperators.IF, t, null, entry.getValue());
             Intermediate.add(q1);
             Intermediate.add(q2);
 
             print("case " + switchVariable.toString() + " " + entry.getKey().toString() + " L" + entry.getValue());
         }
-        if(defaultCase != 0){
+        if(defaultCase != null){
             gotoLabel(defaultCase);
         }
     }
 
     public void addCase(Constant c){
-        int label = newLabel();
+        Label label = newLabel();
         if(c != null){
             cases.put(c, label);
         }else{

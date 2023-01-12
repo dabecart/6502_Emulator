@@ -1,6 +1,7 @@
 package compiler.intermediate.statements;
 
 import compiler.intermediate.expressions.Expression;
+import compiler.intermediate.three_address.Label;
 import compiler.lexer.Tag;
 import compiler.symbols.Type;
 
@@ -31,10 +32,10 @@ public class For extends Statement{
         }
     }
 
-    public void generate(int beforeLabel, int afterLabel){
+    public void generate(Label beforeLabel, Label afterLabel){
         initialStatement.generate(beforeLabel, afterLabel);
-        int innerLoopLabel = newLabel();    // After first statement of for loop
-        int continueLabel = newLabel();     // When continue is called, it executes the third param and goes to innerLoopLabel
+        Label innerLoopLabel = newLabel();    // After first statement of for loop
+        Label continueLabel = newLabel();     // When continue is called, it executes the third param and goes to innerLoopLabel
 
         this.continueLabel = continueLabel;
         this.breakLabel = afterLabel;
@@ -43,10 +44,10 @@ public class For extends Statement{
         innerStatement.generate(innerLoopLabel, afterLabel);
         
         printLabel(continueLabel);
-        stepStatement.generate(0, 0);
+        stepStatement.generate(null, null);
 
         if(condition == null) gotoLabel(innerLoopLabel);
-        else condition.jump(innerLoopLabel, 0);
+        else condition.jump(innerLoopLabel, null);
     }
 
 }

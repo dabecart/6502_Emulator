@@ -1,6 +1,7 @@
 package compiler.intermediate.statements;
 
 import compiler.intermediate.expressions.Expression;
+import compiler.intermediate.three_address.Label;
 import compiler.symbols.Type;
 
 public class IfElse extends Statement {
@@ -16,10 +17,10 @@ public class IfElse extends Statement {
         }
     }
 
-    public void generate(int beforeLabel, int afterLabel){
-        int label1 = newLabel();
-        int label2 = newLabel();
-        expression.jump(0, label2);
+    public void generate(Label beforeLabel, Label afterLabel){
+        Label label1 = newLabel();
+        Label label2 = newLabel();
+        expression.jump(null, label2);
         
         printLabel(label1);
         statement1.generate(label1, afterLabel);

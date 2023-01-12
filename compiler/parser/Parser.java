@@ -65,14 +65,16 @@ public class Parser {
 
     public void program() throws IOException{
         Statement s = block();
-        int begin = Statement.newLabel();
-        int after = Statement.newLabel();
+        Label begin = Statement.newLabel();
+        Label after = Statement.newLabel();
         s.printLabel(begin);
         s.generate(begin, after);
         s.printLabel(after);
         Intermediate.setOperation(SystemOperators.GOTO);
-        Intermediate.setResult(new Label(after));
+        Intermediate.setResult(after);
         Intermediate.next();
+
+        Intermediate.optimize();
     }
 
     private Statement block() throws IOException{

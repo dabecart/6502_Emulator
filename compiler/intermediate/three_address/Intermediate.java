@@ -2,6 +2,7 @@ package compiler.intermediate.three_address;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ListIterator;
 
 import compiler.code_generator.instructions.AssignInstruction;
 import compiler.code_generator.instructions.ConditionalInstruction;
@@ -24,6 +25,7 @@ public class Intermediate {
         quad = setQuadrupleSubClass(quad);
         if(!currentQuad.label.isEmpty()){
             quad.label = new ArrayList<>(currentQuad.label);
+            for(Label li : quad.label) li.occurrences++;
             currentQuad.label.clear();
         }
         intermediateCode.add(quad);
@@ -44,7 +46,8 @@ public class Intermediate {
         return quad;
     }
 
-    public static void setLabel(int label){
+    public static void setLabel(Label label){
+        label.occurrences++;
         currentQuad.addLabel(label);
     }
 
@@ -61,6 +64,7 @@ public class Intermediate {
 
     public static void setResult(Expression result){
         if(currentQuad.result != null) throw new Error("Result is already set");
+        if(result instanceof Label) ((Label) result).occurrences++;
         currentQuad.result = result;
     }
 
@@ -74,10 +78,35 @@ public class Intermediate {
     }
 
     // Will remove single labels and will set a single label for each instruction with multiple
-    // labels
+    // labels.
     public static void optimizeLabels(){
+        // Erase single labels
+        for(Quadruple q : intermediateCode){
+            if(q.label == null || q.label.isEmpty()) continue;
+
+            ListIterator<Label> lIterator = q.label.listIterator();
+            while(lIterator.hasNext()){
+                if(lIterator.next().occurrences <= 1) lIterator.remove();
+            }
+        }
+
+        // Erase duplicated labels
+        for(Quadruple q : intermediateCode){
+            if(q.label == null || q.label.size() <= 1) continue;
+
+            // This instruction has multiple labels, so remove all instances of the duplicated labels
+            // and substitute them with the first of the bunch.
+            Label quadLabel = q.label.get(0);
+            for(int i = 1; i < q.label.size(); i++){
+                Label duplicatedLabel = q.label.get(i);
+                for(Quadruple qin : intermediateCode){
+                    qin.substituteAllXLabelsWithY(duplicatedLabel, quadLabel);
+                }
+            }
+            q.label.clear();
+            q.label.add(quadLabel);
+        }
 
     }
 
-    
 }

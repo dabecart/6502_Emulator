@@ -2,6 +2,7 @@ package compiler.intermediate.expressions.logical;
 
 import compiler.intermediate.expressions.Expression;
 import compiler.intermediate.expressions.TemporalExpression;
+import compiler.intermediate.three_address.Label;
 import compiler.lexer.Token;
 import compiler.symbols.Type;
 
@@ -23,9 +24,9 @@ public class Logical extends Expression {
     }
 
     public Expression generate(){
-        int fromLabel = newLabel(), toLabel = newLabel();
+        Label fromLabel = newLabel(), toLabel = newLabel();
         TemporalExpression branchOutput = new TemporalExpression(type);
-        this.jump(0, fromLabel);
+        this.jump(null, fromLabel);
         print(branchOutput.toString() + " = true");
         gotoLabel(toLabel);
         

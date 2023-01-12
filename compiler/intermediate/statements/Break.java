@@ -1,5 +1,6 @@
 package compiler.intermediate.statements;
 
+import compiler.intermediate.three_address.Label;
 import compiler.lexer.Tag;
 
 public class Break extends Statement{
@@ -16,7 +17,7 @@ public class Break extends Statement{
         this.statement = Statement.Enclosing;
     }
 
-    public void generate(int beforeLabel, int afterLabel){
+    public void generate(Label beforeLabel, Label afterLabel){
         gotoLabel(statement.breakLabel);
     }
     

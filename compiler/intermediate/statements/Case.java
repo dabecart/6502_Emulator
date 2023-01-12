@@ -1,6 +1,7 @@
 package compiler.intermediate.statements;
 
 import compiler.intermediate.expressions.Constant;
+import compiler.intermediate.three_address.Label;
 import compiler.lexer.Tag;
 
 public class Case extends Statement{
@@ -31,7 +32,7 @@ public class Case extends Statement{
         this.parentSwitch = (Switch) Statement.Enclosing;
     }
 
-    public void generate(int beforeLabel, int afterLabel){
+    public void generate(Label beforeLabel, Label afterLabel){
         parentSwitch.addCase(constant);
         statement.generate(beforeLabel, afterLabel);
         gotoLabel(afterLabel); // Exit the switch

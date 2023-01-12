@@ -3,6 +3,7 @@ package compiler.intermediate.statements;
 import compiler.intermediate.Id;
 import compiler.intermediate.expressions.Expression;
 import compiler.intermediate.three_address.Intermediate;
+import compiler.intermediate.three_address.Label;
 import compiler.symbols.Type;
 
 // Set implements an ID on the left side followed by an equal and an expression
@@ -25,7 +26,7 @@ public class Set extends Statement {
         else return null;
     }
 
-    public void generate(int beforeLabel, int afterLabel){
+    public void generate(Label beforeLabel, Label afterLabel){
         Expression red_exp = expression.generate();
         print(id.toString() + " = " + red_exp.toString());
         Intermediate.setResult(id);

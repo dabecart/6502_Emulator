@@ -23,7 +23,7 @@ public class Quadruple {
         this.result = q.result;
     }
 
-    public Quadruple(int label, int op, Expression arg1, Expression arg2, Expression result){
+    public Quadruple(Label label, int op, Expression arg1, Expression arg2, Expression result){
         addLabel(label);
         this.op = op;
         this.arg1 = arg1;
@@ -38,9 +38,14 @@ public class Quadruple {
         this.result = result;
     }
 
-    public void addLabel(int label){
+    public void addLabel(Label label){
+        if(label == null) return;
         if(this.label == null) this.label = new ArrayList<>();
-        if(label > 0 && !containsLabel(label)) this.label.add(new Label(label));
+        if(!containsLabel(label)) this.label.add(label);
+    }
+
+    public boolean containsLabel(Label label){
+        return containsLabel(label.label);
     }
 
     public boolean containsLabel(int label){
@@ -48,6 +53,13 @@ public class Quadruple {
             if(lab.label == label) return true;
         }
         return false;
+    }
+
+    public void substituteAllXLabelsWithY(Label labelX, Label labelY){
+        if(result instanceof Label && ((Label)result).label == labelX.label){
+            result = labelY;
+            labelY.occurrences++;
+        }
     }
 
     public String getLabelString(){

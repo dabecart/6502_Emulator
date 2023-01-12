@@ -1,6 +1,7 @@
 package compiler.intermediate.statements;
 
 import compiler.intermediate.Node;
+import compiler.intermediate.three_address.Label;
 import compiler.lexer.Tag;
 
 public class Statement extends Node {
@@ -19,12 +20,12 @@ public class Statement extends Node {
 
     public static Statement Null = new Statement();
 
-    public void generate(int beginLabel, int afterLabel){}
+    public void generate(Label beginLabel, Label afterLabel){}
 
     // The beginning label of the statement. Used for loops
-    public int continueLabel = 0;
+    public Label continueLabel;
     // The ending label of the statement.
-    public int breakLabel = 0;
+    public Label breakLabel;
     public static Statement Enclosing = Statement.Null;
 
     public boolean isLoopStatement(){

@@ -24,27 +24,27 @@ public class Expression extends Node {
         return this;
     }
 
-    public void jump(int trueLabel, int falseLabel){
+    public void jump(Label trueLabel, Label falseLabel){
         printJump(toString(), trueLabel, falseLabel);
     }
 
-    public void printJump(String testExpression, int trueLabel, int falseLabel){
-        if(trueLabel != 0 && falseLabel != 0){
-            Intermediate.setResult(new Label(trueLabel));
+    public void printJump(String testExpression, Label trueLabel, Label falseLabel){
+        if(trueLabel != null && falseLabel != null){
+            Intermediate.setResult(trueLabel);
             Intermediate.setOperation(SystemOperators.IF);
             Intermediate.next();
-            print("if " + testExpression + " goto L" + trueLabel);
+            print("if " + testExpression + " goto " + trueLabel);
             gotoLabel(falseLabel);
-        }else if(trueLabel != 0){
-            Intermediate.setResult(new Label(trueLabel));
+        }else if(trueLabel != null){
+            Intermediate.setResult(trueLabel);
             Intermediate.setOperation(SystemOperators.IF);
             Intermediate.next();
-            print("if " + testExpression + " goto L" + trueLabel);
-        }else if(falseLabel != 0){
-            Intermediate.setResult(new Label(falseLabel));
+            print("if " + testExpression + " goto " + trueLabel);
+        }else if(falseLabel !=  null){
+            Intermediate.setResult(falseLabel);
             Intermediate.setOperation(SystemOperators.IFNOT);
             Intermediate.next();
-            print("ifnot " + testExpression + " goto L" + falseLabel);
+            print("ifnot " + testExpression + " goto " + falseLabel);
         }
     }
 

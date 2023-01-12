@@ -3,6 +3,7 @@ package compiler.intermediate.statements;
 import compiler.intermediate.Id;
 import compiler.intermediate.expressions.Expression;
 import compiler.intermediate.operators.Arithmetic;
+import compiler.intermediate.three_address.Label;
 import compiler.lexer.Tag;
 import compiler.lexer.Token;
 import compiler.lexer.Word;
@@ -40,7 +41,7 @@ public class OperationAndSet extends Statement {
         else return null;
     }
 
-    public void generate(int beforeLabel, int afterLabel){
+    public void generate(Label beforeLabel, Label afterLabel){
         char operation = ((Word) operator).lexeme.charAt(0);
         Expression op = new Arithmetic(new Token(operation), id, expression);
         Set set = new Set(id, op);

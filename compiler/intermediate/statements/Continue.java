@@ -1,5 +1,7 @@
 package compiler.intermediate.statements;
 
+import compiler.intermediate.three_address.Label;
+
 public class Continue extends Statement{
 
     Statement statement;
@@ -11,7 +13,7 @@ public class Continue extends Statement{
         this.statement = Statement.Enclosing;
     }
 
-    public void generate(int beforeLabel, int afterLabel){
+    public void generate(Label beforeLabel, Label afterLabel){
         gotoLabel(statement.continueLabel);
     }
     

@@ -1,6 +1,7 @@
 package compiler.intermediate.statements;
 
 import compiler.intermediate.expressions.Expression;
+import compiler.intermediate.three_address.Label;
 import compiler.lexer.Tag;
 import compiler.symbols.Type;
 
@@ -22,12 +23,12 @@ public class DoWhile extends Statement{
         }
     }
 
-    public void generate(int beforeLabel, int afterLabel){
+    public void generate(Label beforeLabel, Label afterLabel){
         this.continueLabel = beforeLabel;
         this.breakLabel = afterLabel;
-        int label = newLabel();
+        Label label = newLabel();
         statement.generate(beforeLabel, label);
         printLabel(label);
-        expression.jump(beforeLabel, 0);
+        expression.jump(beforeLabel, null);
     }
 }

@@ -3,6 +3,7 @@ package compiler.intermediate.statements;
 import compiler.intermediate.Id;
 import compiler.intermediate.expressions.Expression;
 import compiler.intermediate.operators.ArrayAccess;
+import compiler.intermediate.three_address.Label;
 import compiler.symbols.Array;
 import compiler.symbols.Type;
 
@@ -25,7 +26,7 @@ public class SetArray extends Statement{
         else return null;
     }
 
-    public void generate(int beforeLabel, int afterLabel){
+    public void generate(Label beforeLabel, Label afterLabel){
         String s1 = indexExpression.reduce().toString();
         String s2 = expression.reduce().toString();
         print(array.toString() + " [" + s1 + "] = " + s2);

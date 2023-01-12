@@ -17,18 +17,18 @@ public class Node {
     }
 
     static int labels = 0;
-    public static int newLabel(){
-        return ++labels;
+    public static Label newLabel(){
+        return new Label(++labels);
     }
 
-    public void printLabel(int labelNumber){
-        System.out.print("L" + labelNumber + ":");
-        Intermediate.setLabel(labelNumber);
+    public void printLabel(Label l){
+        Intermediate.setLabel(l);
+        System.out.print(l.toString() + ":");
     }
 
-    public void gotoLabel(int labelNumber){
+    public void gotoLabel(Label labelNumber){
         Intermediate.setOperation(SystemOperators.GOTO);
-        Intermediate.setResult(new Label(labelNumber));
+        Intermediate.setResult(labelNumber);
         Intermediate.next();
         System.out.println("\tgoto L" + labelNumber);
     }
