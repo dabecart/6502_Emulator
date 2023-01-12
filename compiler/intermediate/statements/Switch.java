@@ -4,9 +4,15 @@ import java.util.Hashtable;
 import java.util.Set;
 import java.util.Map.Entry;
 
+import compiler.code_generator.SystemOperators;
 import compiler.intermediate.expressions.Constant;
 import compiler.intermediate.expressions.Expression;
+import compiler.intermediate.expressions.TemporalExpression;
+import compiler.intermediate.three_address.Intermediate;
+import compiler.intermediate.three_address.Label;
+import compiler.intermediate.three_address.Quadruple;
 import compiler.lexer.Tag;
+import compiler.symbols.Type;
 
 public class Switch extends Statement{
     Expression expression;
@@ -31,14 +37,21 @@ public class Switch extends Statement{
         this.breakLabel = afterLabel;
 
         int testLabel = newLabel();
-        String switchVariable = expression.reduce().toString();
+
+        Expression switchVariable = expression.reduce();
         gotoLabel(testLabel); // Go to test condition area
         statement.generate(beforeLabel, afterLabel);
         printLabel(testLabel);
         
         Set<Entry<Constant, Integer>> entries = cases.entrySet();
         for(Entry<Constant, Integer> entry : entries){
-            print("case " + switchVariable + " " + entry.getKey().toString() + " L" + entry.getValue());
+            TemporalExpression t = new TemporalExpression(Type.Bool);
+            Quadruple q1 = new Quadruple(SystemOperators.EQ, switchVariable, entry.getKey(), t);
+            Quadruple q2 = new Quadruple(SystemOperators.IF, t, null, new Label(entry.getValue()));
+            Intermediate.add(q1);
+            Intermediate.add(q2);
+
+            print("case " + switchVariable.toString() + " " + entry.getKey().toString() + " L" + entry.getValue());
         }
         if(defaultCase != 0){
             gotoLabel(defaultCase);

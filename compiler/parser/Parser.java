@@ -2,6 +2,7 @@ package compiler.parser;
 
 import java.io.IOException;
 
+import compiler.code_generator.SystemOperators;
 import compiler.intermediate.Id;
 import compiler.intermediate.expressions.Constant;
 import compiler.intermediate.expressions.Expression;
@@ -26,6 +27,8 @@ import compiler.intermediate.statements.Statement;
 import compiler.intermediate.statements.StatementBundle;
 import compiler.intermediate.statements.Switch;
 import compiler.intermediate.statements.While;
+import compiler.intermediate.three_address.Intermediate;
+import compiler.intermediate.three_address.Label;
 import compiler.lexer.Lexer;
 import compiler.lexer.Num;
 import compiler.lexer.Tag;
@@ -67,6 +70,9 @@ public class Parser {
         s.printLabel(begin);
         s.generate(begin, after);
         s.printLabel(after);
+        Intermediate.setOperation(SystemOperators.GOTO);
+        Intermediate.setResult(new Label(after));
+        Intermediate.next();
     }
 
     private Statement block() throws IOException{

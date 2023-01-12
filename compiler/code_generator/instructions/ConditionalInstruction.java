@@ -23,6 +23,6 @@ public class ConditionalInstruction extends Quadruple{
     }
 
     public String toString(){
-        return getLabelString() + 
+        return getLabelString() + ((op==SystemOperators.IF) ? "if " : "ifnot ") + arg1.toString() + " goto " + result.toString();
     }
 }

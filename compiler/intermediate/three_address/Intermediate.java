@@ -22,6 +22,10 @@ public class Intermediate {
 
     public static void add(Quadruple quad){
         quad = setQuadrupleSubClass(quad);
+        if(!currentQuad.label.isEmpty()){
+            quad.label = new ArrayList<>(currentQuad.label);
+            currentQuad.label.clear();
+        }
         intermediateCode.add(quad);
     }
 
@@ -63,6 +67,16 @@ public class Intermediate {
     public static void printAll(){
         System.out.println("\n*******************************************************");
         for(Quadruple q : intermediateCode) System.out.println(q);
+    }
+
+    public static void optimize(){
+        optimizeLabels();
+    }
+
+    // Will remove single labels and will set a single label for each instruction with multiple
+    // labels
+    public static void optimizeLabels(){
+
     }
 
     
