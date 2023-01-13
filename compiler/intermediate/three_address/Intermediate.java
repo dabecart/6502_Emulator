@@ -88,6 +88,7 @@ public class Intermediate {
             while(lIterator.hasNext()){
                 if(lIterator.next().occurrences <= 1) lIterator.remove();
             }
+            if(q.label.size() == 0) q.label = null;
         }
 
         // Erase duplicated labels

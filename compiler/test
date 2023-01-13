@@ -1,9 +1,11 @@
 {
-    int x, y;
+    int x,y; 
+    int z[100];
     
     for(int i = 0; i < 100; ++i){
         x = 100-i;
         y = i;
+        z[x] = x;
     }
 
 }

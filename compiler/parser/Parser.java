@@ -94,7 +94,8 @@ public class Parser {
         boolean declarationHasStatements = false;
 
         while(peekToken.tag == Tag.BASIC){
-            Type p = type();
+            Type variableType = (Type) peekToken;
+            match(Tag.BASIC);
 
             boolean commaFound;
             do{ // For declarations with comma i.e. int i,j,k=2;
@@ -105,20 +106,21 @@ public class Parser {
                 if(topEnviroment.getTokenId(tok) != null){
                     error("Duplicate variable " + tok.toString());
                 }
-                Id id = new Id((Word)tok, p, usedDeclarations);
+                Id id = new Id((Word)tok, variableType, usedDeclarations);
                 topEnviroment.addToken(tok, id);
-                usedDeclarations += p.byteSize;
+                usedDeclarations += variableType.byteSize;
+
+                if(peekToken.tag == '['){  // Array
+                    variableType = array(variableType);
+                }
 
                 if(peekToken.tag == '='){   // Variable assignment
+                    if(variableType instanceof Array) error("Cannot initialize array");
                     declarationHasStatements = true;
                     move();
                     statement = new StatementBundle(statement, new Set(id, boolExpression())); 
-                }else if(peekToken.tag == '['){  // Array
-                    declarationHasStatements = true;
-                    ArrayAccess x = arrayOffset(id);
-                    match('=');
-                    statement = new StatementBundle(statement, new SetArray(x, boolExpression())); 
                 }
+
                 commaFound = peekToken.tag == ',';
                 if(commaFound) move();
             } while(commaFound);
@@ -127,14 +129,6 @@ public class Parser {
         return declarationHasStatements ? statement : null;
     }
     
-    // Fetch the type of the declaration.
-    private Type type() throws IOException{
-        Type p = (Type) peekToken;
-        match(Tag.BASIC);
-        if(peekToken.tag != '[') return p;  // This will normally be BASIC
-        else return array(p);               // If next is '[', then it's an array
-    }
-
     // Create an array of type p:           Array -> type ID [ NUM ]
     private Type array(Type p) throws IOException{
         match('[');
@@ -331,7 +325,7 @@ public class Parser {
         ArrayAccess x = null;
 
         // Can be: ++ID aka. op ID  or ID = aka. ID op ...
-        Token tok1 = peekToken; 
+        Token tok1 = peekToken;
         move();
         Token tok2 = peekToken;
         move();
@@ -502,7 +496,7 @@ public class Parser {
             }
 
             default:{
-                error("Syntax error");
+                error("Syntax error, wrong " + peekToken);
                 return x;
             }
         }
@@ -519,7 +513,6 @@ public class Parser {
         match(']');
 
         // Calculate the direction for the array
-        type = ((Array) type).of;
         widthExpression = new Constant(type.byteSize);
         temp1 = new Arithmetic(new Token('*'), indexExpression, widthExpression);
         location = temp1;
@@ -530,7 +523,6 @@ public class Parser {
             indexExpression = boolExpression();
             match(']');
 
-            type = ((Array) type).of;
             widthExpression = new Constant(type.byteSize);
             temp1 = new Arithmetic(new Token('*'), indexExpression, widthExpression);
             temp2 = new Arithmetic(new Token('+'),  location, temp1);
