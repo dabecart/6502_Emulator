@@ -512,7 +512,7 @@ public class Parser {
         Expression indexExpression, widthExpression;
         Expression temp1, temp2;
         Expression location;    // Byte location in disk
-        Type type = id.type;
+        Type type = ((Array)id.type).of;
 
         match('[');
         indexExpression = boolExpression();

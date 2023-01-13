@@ -7,7 +7,7 @@ public class Array extends Type {
     public int size = 1;
 
     public Array(int sz, Type p){
-        super("[]", Tag.ARRAY, sz*p.byteSize);
+        super("[]", Tag.ARRAY, sz*p.byteSize, p.functions);
         this.size = sz;
         this.of = p;
     }

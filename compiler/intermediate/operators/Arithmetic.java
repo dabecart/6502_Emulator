@@ -12,7 +12,7 @@ public class Arithmetic extends Operator{
         super(operation, null);
         this.exp1 = exp1;
         this.exp2 = exp2;
-        type = Type.typeConversion(exp1.type, exp2.type);
+        this.type = Type.typeConversion(exp1.type, exp2.type);
         if(type == null) error("Type conversion error");
     }
 

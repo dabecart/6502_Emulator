@@ -5,25 +5,24 @@ import java.util.List;
 
 import compiler.lexer.Tag;
 import compiler.lexer.Word;
+import compiler.symbols.types.CharType;
+import compiler.symbols.types.TypeFunctions;
 
 public class Type extends Word {
     public int byteSize = 0;
+    public TypeFunctions functions;
 
-    public Type(Type type){
-        super(type.lexeme, type.tag);
-        this.byteSize = type.byteSize;
-    }
-
-    public Type(String str, int tag, int size){
+    public Type(String str, int tag, int size, TypeFunctions functions){
         super(str, tag);
-        byteSize = size;
+        this.byteSize = size;
+        this.functions = functions;
     }
 
     public static final Type 
-        Int = new Type("int", Tag.BASIC, 4),
-        Char = new Type("char", Tag.BASIC, 1),
-        Bool = new Type("bool", Tag.BASIC, 1),
-        Label = new Type("L", Tag.LABEL, 0);
+        Int = new Type("int", Tag.BASIC, 4, null),
+        Char = new Type("char", Tag.BASIC, 1, new CharType()),
+        Bool = new Type("bool", Tag.BASIC, 1, null),
+        Label = new Type("L", Tag.LABEL, 0, null);
 
     public static final List<Type> reservedTypes = new ArrayList<Type>(){{
         add(Int);
@@ -41,13 +40,6 @@ public class Type extends Word {
         
         if(t1 == Type.Int || t2 == Type.Int) return Type.Int;
         else if(t1 == Type.Char || t2 == Type.Char) return Type.Char;
-        else{
-            try {
-                throw new Exception("Type conversion between " + t1.toString() + " and " + t2.toString() + " not possible");
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        return null;
+        else throw new Error("Type conversion between " + t1.toString() + " and " + t2.toString() + " not possible");
     }
 }

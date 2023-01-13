@@ -1,6 +1,5 @@
 package compiler.code_generator;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -11,10 +10,11 @@ public class Generator {
     
     CPU cpu = new CPU();
     List<Quadruple> intermediateCode;
-
+    
     StringBuilder out = new StringBuilder();
 
     HashMap<String, MemoryCell> memory = new HashMap<>();
+    int memoryCounter = 0;
 
     public Generator(){
         this.intermediateCode = Intermediate.intermediateCode;
@@ -26,6 +26,12 @@ public class Generator {
 
     public void print(){
         System.out.println(out);
+    }
+
+    public void addToMemory(String name, MemoryCell m){
+        memory.put(name, m);
+        m.address = memoryCounter;
+        memoryCounter += m.type.byteSize;
     }
 
 }

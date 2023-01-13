@@ -16,6 +16,10 @@ public class Expression extends Node {
         this.type = t;
     }
 
+    public Expression castToType(Type toType){
+        return null;
+    }
+
     public Expression generate(){
         return this;
     }

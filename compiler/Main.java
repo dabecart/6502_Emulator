@@ -5,7 +5,6 @@ import java.io.FileReader;
 import java.io.IOException;
 
 import compiler.code_generator.Generator;
-import compiler.intermediate.three_address.Intermediate;
 import compiler.lexer.Lexer;
 import compiler.parser.Parser;
 

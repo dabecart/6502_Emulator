@@ -7,8 +7,6 @@ public class CPU {
     public byte[] stack = new byte[256];
     public byte stackPointer = (byte)255;
     
-    public int memoryPointer = 0;
-
     public CPU(){}
-    
+
 }
