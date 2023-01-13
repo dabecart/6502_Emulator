@@ -5,14 +5,17 @@ import java.util.Hashtable;
 import compiler.intermediate.Id;
 import compiler.lexer.Token;
 
-// Space of lines delined by { and }
 public class Enviroment {
     private Hashtable<Token, Id> table;
-    protected Enviroment previousEnv;
+    public Enviroment previousEnv;
+    public int enviromentId;
+
+    public static int enviromentCount = 0;
 
     public Enviroment(Enviroment previousEnv){
         this.table = new Hashtable<>();
         this.previousEnv = previousEnv;
+        this.enviromentId = enviromentCount++;
     }
 
     public void addToken(Token t, Id id){

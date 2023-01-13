@@ -1,5 +1,6 @@
 package compiler.code_generator.instructions;
 
+import compiler.code_generator.Generator;
 import compiler.code_generator.SystemOperators;
 import compiler.intermediate.operators.ArrayAccess;
 import compiler.intermediate.three_address.Quadruple;
@@ -30,5 +31,9 @@ public class AssignInstruction extends Quadruple{
             if(result instanceof ArrayAccess) return  ret + "[" + arg2.toString() + "] = " + arg1.toString();
             else return ret + " = " + arg1.toString() + "[" + arg2.toString() + "]";
         } 
+    }
+
+    public String generate(Generator gen){
+        
     }
 }

@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 
+import compiler.code_generator.Generator;
 import compiler.intermediate.three_address.Intermediate;
 import compiler.lexer.Lexer;
 import compiler.parser.Parser;
@@ -21,8 +22,9 @@ public class Main {
         Lexer lexer = new Lexer(br);
         Parser parser = new Parser(lexer);
         parser.program();
-
-        Intermediate.printAll();
+        Generator gen = new Generator();
+        gen.generate();
+        gen.print();
         System.out.println();
     }
 }

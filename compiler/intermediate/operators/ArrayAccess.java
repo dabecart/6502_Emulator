@@ -6,6 +6,7 @@ import compiler.intermediate.three_address.Intermediate;
 import compiler.intermediate.three_address.Label;
 import compiler.lexer.Tag;
 import compiler.lexer.Word;
+import compiler.symbols.Array;
 import compiler.symbols.Type;
 
 public class ArrayAccess extends Operator {
@@ -14,7 +15,9 @@ public class ArrayAccess extends Operator {
     public Expression index;
 
     public ArrayAccess(Id a, Expression exp, Type type){
-        super(new Word("[]", Tag.INDEX), type);
+        super(new Word("[]", Tag.INDEX), null);
+        if(type instanceof Array) this.type = ((Array)type).of;
+        else this.type = type; 
         array = a;
         index = exp;
     }

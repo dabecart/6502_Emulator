@@ -106,13 +106,14 @@ public class Parser {
                 if(topEnviroment.getTokenId(tok) != null){
                     error("Duplicate variable " + tok.toString());
                 }
-                Id id = new Id((Word)tok, variableType, usedDeclarations);
-                topEnviroment.addToken(tok, id);
-                usedDeclarations += variableType.byteSize;
 
                 if(peekToken.tag == '['){  // Array
                     variableType = array(variableType);
                 }
+
+                usedDeclarations += variableType.byteSize;
+                Id id = new Id((Word)tok, variableType, usedDeclarations);
+                topEnviroment.addToken(tok, id);
 
                 if(peekToken.tag == '='){   // Variable assignment
                     if(variableType instanceof Array) error("Cannot initialize array");
@@ -186,6 +187,7 @@ public class Parser {
                 s1 = statement();
                 whileNode.start(x, s1);
                 Statement.Enclosing = savedStatement;
+
                 return whileNode;
             }
 
@@ -206,6 +208,7 @@ public class Parser {
                 
                 dowhileNode.start(x, s1);
                 Statement.Enclosing = savedStatement;
+
                 return dowhileNode;
             }
 
@@ -213,6 +216,9 @@ public class Parser {
                 For forLoopNode = new For();
                 savedStatement = Statement.Enclosing;
                 Statement.Enclosing = forLoopNode;
+
+                // A for loop creates an enviroment for the declarations on the first parameter.
+                topEnviroment = new Enviroment(topEnviroment);
 
                 match(Tag.FOR);
                 match('(');
@@ -240,6 +246,8 @@ public class Parser {
 
                 forLoopNode.start(s1, x, s2, s3);
                 Statement.Enclosing = savedStatement;
+
+                topEnviroment = topEnviroment.previousEnv;
                 return forLoopNode;
             }
 

@@ -30,7 +30,7 @@ public class Node {
         Intermediate.setOperation(SystemOperators.GOTO);
         Intermediate.setResult(labelNumber);
         Intermediate.next();
-        System.out.println("\tgoto L" + labelNumber);
+        System.out.println("\tgoto " + labelNumber);
     }
 
     public void print(String s){

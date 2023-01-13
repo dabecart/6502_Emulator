@@ -3,6 +3,7 @@ package compiler.intermediate.three_address;
 import java.util.ArrayList;
 import java.util.List;
 
+import compiler.code_generator.Generator;
 import compiler.intermediate.expressions.Expression;
 
 public class Quadruple {
@@ -83,6 +84,10 @@ public class Quadruple {
         str.append(")- " + this.result.toString());
 
         return str.toString();
+    }
+
+    public String generate(Generator gen){
+        return "ERROR!";
     }
 
 }

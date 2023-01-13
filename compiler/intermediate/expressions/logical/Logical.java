@@ -15,7 +15,7 @@ public class Logical extends Expression {
         this.exp2 = exp2;
 
         this.type = checkType(exp1.type, exp2.type);
-        if(type == null) error("Type conversion error");
+        if(type == null) error("Type conversion error. Cannot convert from " + exp1.type + " to " + exp2.type);
     }
 
     public Type checkType(Type t1, Type t2){

@@ -16,8 +16,10 @@ public class Comparator extends Logical {
 
     public Type checkType(Type t1, Type t2){
         if(t1 instanceof Array || t2 instanceof Array) return null;
-        else if(t1 == t2) return Type.Bool;
-        else return null;
+        
+        if(Type.typeConversion(t1, t2) != null){
+            return Type.Bool;
+        }else return null;
     }
 
     public void jump(Label trueLabel, Label falseLabel){
