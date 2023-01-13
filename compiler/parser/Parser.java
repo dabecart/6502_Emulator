@@ -321,45 +321,39 @@ public class Parser {
     }
 
     private Statement assignValue() throws IOException{
-        boolean valueIsArray;
-        ArrayAccess x = null;
+        Expression variable = null;
+        Token operator = null;
 
-        // Can be: ++ID aka. op ID  or ID = aka. ID op ...
-        Token tok1 = peekToken;
-        move();
-        Token tok2 = peekToken;
-        move();
-
-        if(tok1.tag != Tag.ID){
-            Token temp = tok2;
-            tok2 = tok1;
-            tok1 = temp;
+        // Can be: op ID (aka. ++ID)  or ID op (aka. ID = ) and all the array variants.
+        if(peekToken.tag == Tag.ID){
+            variable = getVariable(); // May return an array
+        }else{
+            operator = peekToken;
+            move();
+        }
+        
+        if(peekToken.tag == Tag.ID){
+            variable = getVariable();
+        }else{
+            operator = peekToken;
+            move();
         }
 
-        // tok1 stores the ID and tok2 the operand
-        Id id = topEnviroment.getTokenId(tok1);
-        if(id == null) error(tok1.toString() + " not declared");
-
-        if(tok2.tag == Tag.INC || tok2.tag == Tag.DEC){ // ++ID and --ID
-            Token operator = new Token((tok2.tag == Tag.INC) ? '+' : '-');
-            Expression inc = new Arithmetic(operator, id, Constant.ONE);
-            return new Set(id, inc);
-        } // else...
-
-        if(valueIsArray = (peekToken.tag == '[')){  // Array
-            x = arrayOffset(id);
+        if(operator.tag == Tag.INC || operator.tag == Tag.DEC){ // ++ID and --ID
+            Token innerOperator = new Token((operator.tag == Tag.INC) ? '+' : '-');
+            Expression inc = new Arithmetic(innerOperator, variable, Constant.ONE);
+            return new Set((Id)variable, inc);
         }
 
-        Expression exp = boolExpression();
-        if(tok2.tag == '='){ 
-            if(valueIsArray){
-                return new SetArray(x, exp);
+        if(operator.tag == '='){ 
+            if(variable instanceof ArrayAccess){
+                return new SetArray((ArrayAccess)variable, boolExpression());
             }else {
-                return new Set(id, exp);
+                return new Set((Id) variable, boolExpression());
             }
         } // else...  Either is wrong or is an operate and set (+=, -=...)
         
-        return new OperationAndSet(id,tok2,exp);
+        return new OperationAndSet(variable, operator, boolExpression());
     }
 
     // Parsing of general expressions (starting with boolean OR firts)
@@ -486,13 +480,7 @@ public class Parser {
             }
 
             case Tag.ID:{
-                String s = peekToken.toString();
-                Id id = topEnviroment.getTokenId(peekToken);
-                if(id == null) error(s + " not declared");
-
-                move();
-                if(peekToken.tag != '[') return id;
-                else return arrayOffset(id);
+                return getVariable();
             }
 
             default:{
@@ -500,6 +488,16 @@ public class Parser {
                 return x;
             }
         }
+    }
+
+    Expression getVariable() throws IOException{
+        String s = peekToken.toString();
+        Id id = topEnviroment.getTokenId(peekToken);
+        if(id == null) error(s + " not declared");
+
+        move();
+        if(peekToken.tag != '[') return id;
+        else return arrayOffset(id);
     }
 
     ArrayAccess arrayOffset(Id id) throws IOException{

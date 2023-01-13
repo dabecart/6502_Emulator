@@ -3,6 +3,7 @@ package compiler.intermediate.statements;
 import compiler.intermediate.Id;
 import compiler.intermediate.expressions.Expression;
 import compiler.intermediate.operators.Arithmetic;
+import compiler.intermediate.operators.ArrayAccess;
 import compiler.intermediate.three_address.Label;
 import compiler.lexer.Tag;
 import compiler.lexer.Token;
@@ -12,12 +13,15 @@ import compiler.symbols.Type;
 // OperationAndSet implements an ID on the left side followed by an 
 // +=, -=, *=, /= or %= and an expression on the right.
 public class OperationAndSet extends Statement {
-    public Id id;
+    public Expression id;
     public Token operator;
     public Expression expression;
 
-    public OperationAndSet(Id i, Token operator, Expression exp){
+    public OperationAndSet(Expression i, Token operator, Expression exp){
         this.id = i;
+        if(!(i instanceof ArrayAccess) && !(i instanceof Id)){
+            error("Cannot set this expression");
+        }
         this.operator = operator;
         if(!isOperatorAndEqual()){
             error("Unrecognised operator " + operator.toString());
@@ -44,7 +48,13 @@ public class OperationAndSet extends Statement {
     public void generate(Label beforeLabel, Label afterLabel){
         char operation = ((Word) operator).lexeme.charAt(0);
         Expression op = new Arithmetic(new Token(operation), id, expression);
-        Set set = new Set(id, op);
-        set.generate(beforeLabel, afterLabel);
+        if(id instanceof Id){
+            Set set = new Set((Id)id, op);
+            set.generate(beforeLabel, afterLabel);
+        }else if(id instanceof ArrayAccess){
+            SetArray set = new SetArray((ArrayAccess)id, op);
+            set.generate(beforeLabel, afterLabel);
+        }
+
     }
 }

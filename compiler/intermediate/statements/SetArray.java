@@ -1,19 +1,19 @@
 package compiler.intermediate.statements;
 
-import compiler.intermediate.Id;
 import compiler.intermediate.expressions.Expression;
 import compiler.intermediate.operators.ArrayAccess;
+import compiler.intermediate.three_address.Intermediate;
 import compiler.intermediate.three_address.Label;
 import compiler.symbols.Array;
 import compiler.symbols.Type;
 
 public class SetArray extends Statement{
-    public Id array;
+    public ArrayAccess array;
     public Expression indexExpression;
     public Expression expression;
 
     public SetArray(ArrayAccess arrAcc, Expression exp){
-        this.array = arrAcc.array;
+        this.array = arrAcc;
         this.indexExpression = arrAcc.index;
         this.expression = exp;
         if(checkType(arrAcc.type, exp.type) == null) error("Type error");
@@ -27,9 +27,13 @@ public class SetArray extends Statement{
     }
 
     public void generate(Label beforeLabel, Label afterLabel){
-        String s1 = indexExpression.reduce().toString();
-        String s2 = expression.reduce().toString();
-        print(array.toString() + " [" + s1 + "] = " + s2);
+        Expression s1 = indexExpression.reduce();
+        Expression s2 = expression.reduce();
+        Intermediate.setArgs(s2, s1);
+        Intermediate.setResult(array);
+        Intermediate.setOperation('=');
+        Intermediate.next();
+        print(array.toString() + "[" + s1 + "] = " + s2);
     }
 
 }

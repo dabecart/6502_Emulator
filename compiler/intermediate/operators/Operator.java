@@ -14,7 +14,9 @@ public class Operator extends Expression{
     public Expression reduce(){
         Expression x = generate();
         TemporalExpression t = new TemporalExpression(type);
+        
         Intermediate.setResult(t);
+        if(Intermediate.currentQuad.op == -1) Intermediate.setOperation('=');
         Intermediate.next();
         print(t.toString() + " = " + x.toString());
         return t;
