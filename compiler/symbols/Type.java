@@ -41,6 +41,10 @@ public class Type extends Word {
         return p == Type.Char || p == Type.Int;
     }
 
+    public boolean isNumber(){
+        return isNumber(this);
+    }
+
     public static Type typeConversion(Type t1, Type t2){
         if(t1 == t2) return t1;
         if(!isNumber(t1) || !isNumber(t2)) return null;

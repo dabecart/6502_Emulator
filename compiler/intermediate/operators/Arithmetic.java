@@ -1,5 +1,6 @@
 package compiler.intermediate.operators;
 
+import compiler.intermediate.expressions.Constant;
 import compiler.intermediate.expressions.Expression;
 import compiler.intermediate.three_address.Intermediate;
 import compiler.lexer.Token;
@@ -12,7 +13,14 @@ public class Arithmetic extends Operator{
         super(operation, null);
         this.exp1 = exp1;
         this.exp2 = exp2;
-        this.type = Type.typeConversion(exp1.type, exp2.type);
+
+        if(exp1 instanceof Constant){
+            this.exp1 = exp1.castToType(exp2.type);
+        } else if(exp2 instanceof Constant){
+            this.exp2 = exp2.castToType(exp1.type);
+        }
+
+        this.type = Type.typeConversion(this.exp1.type, this.exp2.type);
         if(type == null) error("Type conversion error");
     }
 

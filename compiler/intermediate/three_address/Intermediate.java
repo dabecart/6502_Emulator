@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.ListIterator;
 
 import compiler.code_generator.instructions.AssignInstruction;
+import compiler.code_generator.instructions.CastInstruction;
 import compiler.code_generator.instructions.ConditionalInstruction;
 import compiler.code_generator.instructions.JumpInstruction;
 import compiler.code_generator.instructions.OperateInstruction;
@@ -43,6 +44,7 @@ public class Intermediate {
         if(JumpInstruction.checkOperator(quad.op)) return new JumpInstruction(quad);
         if(OperateInstruction.checkOperator(quad.op)) return new OperateInstruction(quad);
         if(UnaryInstruction.checkOperator(quad.op)) return new UnaryInstruction(quad);
+        if(CastInstruction.checkOperator(quad.op)) return new CastInstruction(quad);
         return quad;
     }
 

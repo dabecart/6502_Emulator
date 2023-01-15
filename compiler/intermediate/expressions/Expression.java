@@ -19,7 +19,10 @@ public class Expression extends Node {
     }
 
     public Expression castToType(Type toType){
-        return null;
+        if(toType.isNumber()){
+            return new Expression(op, toType);
+        }
+        throw new Error("Cannot cast from " + this.type + " to " + toType);
     }
 
     public Expression generate(){
@@ -52,6 +55,10 @@ public class Expression extends Node {
             Intermediate.next();
             print("ifnot " + testExpression + " goto " + falseLabel);
         }
+    }
+
+    public String getName(){
+        return toString();
     }
 
     public String toString(){

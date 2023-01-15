@@ -26,7 +26,7 @@ public class AssignInstruction extends Quadruple{
     }
 
     public String toString(){
-        String ret = getLabelString() +  result.toString();
+        String ret = getLabelString() +  result.getName();
         if(arg2 == null) return ret + " = " + arg1.toString();
         else{
             if(result instanceof ArrayAccess) return  ret + "[" + arg2.toString() + "] = " + arg1.toString();

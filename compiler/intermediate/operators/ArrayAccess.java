@@ -32,6 +32,10 @@ public class ArrayAccess extends Operator {
         printJump(reduce().toString(), trueLabel, falseLabel);
     }
 
+    public String getName(){
+        return array.toString();
+    }
+
     public String toString(){
         return array.toString() + "[" + index.toString() + "]";
     }

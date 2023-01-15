@@ -34,5 +34,8 @@ public class SystemOperators {
                             IFNOT = Tag.ELSE,
 
                             // Unconditional jump
-                            GOTO = Tag.GOTO;
+                            GOTO = Tag.GOTO,
+
+                            //Cast instruction
+                            CAST = Tag.CAST;
 }

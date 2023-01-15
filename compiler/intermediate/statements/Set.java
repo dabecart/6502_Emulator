@@ -1,6 +1,7 @@
 package compiler.intermediate.statements;
 
 import compiler.intermediate.Id;
+import compiler.intermediate.expressions.Constant;
 import compiler.intermediate.expressions.Expression;
 import compiler.intermediate.three_address.Intermediate;
 import compiler.intermediate.three_address.Label;
@@ -15,6 +16,9 @@ public class Set extends Statement {
     public Set(Id i, Expression exp){
         this.id = i;
         this.expression = exp;
+        if(this.expression instanceof Constant){
+            this.expression = exp.castToType(id.type);
+        }
         if(checkType(id.type, exp.type) == null){
             error("Type error");
         }
@@ -28,6 +32,8 @@ public class Set extends Statement {
 
     public void generate(Label beforeLabel, Label afterLabel){
         Expression red_exp = expression.generate();
+        if(red_exp.type != id.type) red_exp = id.castExpression(red_exp);
+
         print(id.toString() + " = " + red_exp.toString());
         Intermediate.setResult(id);
         // If no operation is done, then its a copy sentence.

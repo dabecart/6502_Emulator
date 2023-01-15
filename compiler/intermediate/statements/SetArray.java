@@ -1,5 +1,6 @@
 package compiler.intermediate.statements;
 
+import compiler.intermediate.expressions.Constant;
 import compiler.intermediate.expressions.Expression;
 import compiler.intermediate.operators.ArrayAccess;
 import compiler.intermediate.three_address.Intermediate;
@@ -16,6 +17,9 @@ public class SetArray extends Statement{
         this.array = arrAcc;
         this.indexExpression = arrAcc.index;
         this.expression = exp;
+        if(this.expression instanceof Constant){
+            this.expression = exp.castToType(array.type);
+        }
         if(checkType(arrAcc.type, exp.type) == null) error("Type error");
     }
 
@@ -29,11 +33,13 @@ public class SetArray extends Statement{
     public void generate(Label beforeLabel, Label afterLabel){
         Expression s1 = indexExpression.reduce();
         Expression s2 = expression.reduce();
+        if(s2.type != array.type) s2 = array.castExpression(s2);
+
         Intermediate.setArgs(s2, s1);
         Intermediate.setResult(array);
         Intermediate.setOperation('=');
         Intermediate.next();
-        print(array.toString() + "[" + s1 + "] = " + s2);
+        print(array.getName() + "[" + s1 + "] = " + s2);
     }
 
 }
