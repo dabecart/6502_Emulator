@@ -12,6 +12,7 @@ import compiler.intermediate.expressions.logical.Not;
 import compiler.intermediate.expressions.logical.Or;
 import compiler.intermediate.operators.Arithmetic;
 import compiler.intermediate.operators.ArrayAccess;
+import compiler.intermediate.operators.Cast;
 import compiler.intermediate.operators.Unary;
 import compiler.intermediate.statements.Break;
 import compiler.intermediate.statements.Case;
@@ -454,6 +455,12 @@ public class Parser {
             Token tok = peekToken;
             move();
             return new Not(tok, unary());
+        }else if(peekToken.tag == '('){
+            match('(');
+            Token typeCast = peekToken;
+            match(Tag.BASIC);
+            match(')');
+            return new Cast(typeCast, boolExpression());
         }else{
             return factor();
         }

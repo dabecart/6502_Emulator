@@ -18,7 +18,11 @@ public class Arithmetic extends Operator{
 
     public Expression generate(){
         Expression red1 = exp1.reduce();
+        if(red1.type != this.type) red1 = castExpression(red1);
+
         Expression red2 = exp2.reduce();
+        if(red2.type != this.type) red2 = castExpression(red2);
+
         Arithmetic arth = new Arithmetic(op, red1, red2);
         Intermediate.setArgs(red1, red2);
         Intermediate.setOperation(this.op.tag);

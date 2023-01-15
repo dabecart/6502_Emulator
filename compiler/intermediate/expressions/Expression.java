@@ -2,8 +2,10 @@ package compiler.intermediate.expressions;
 
 import compiler.code_generator.SystemOperators;
 import compiler.intermediate.Node;
+import compiler.intermediate.operators.Cast;
 import compiler.intermediate.three_address.Intermediate;
 import compiler.intermediate.three_address.Label;
+import compiler.lexer.Tag;
 import compiler.lexer.Token;
 import compiler.symbols.Type;
 
@@ -54,6 +56,17 @@ public class Expression extends Node {
 
     public String toString(){
         return op.toString();
+    }
+
+    public Expression castExpression(Expression exp){
+        Cast c = new Cast(type, exp);   // Used only for the print
+        TemporalExpression t = new TemporalExpression(type);
+        Intermediate.setArgs(exp, null);
+        Intermediate.setResult(t);
+        Intermediate.setOperation(Tag.CAST);
+        Intermediate.next();
+        print(t.toString() + " = " + c.toString());
+        return t;
     }
     
 }

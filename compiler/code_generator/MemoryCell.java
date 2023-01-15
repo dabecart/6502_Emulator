@@ -8,11 +8,10 @@ public class MemoryCell {
     public int address;
     public byte value;
 
-    public MemoryCell(Type type, int address, byte value){
+    public MemoryCell(Type type, int address){
         this.type = type;
         this.address = address;
         address += type.byteSize; // Increase memory pointer in CPU.
-        this.value = value;
     }
 
 

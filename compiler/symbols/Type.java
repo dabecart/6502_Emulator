@@ -30,6 +30,13 @@ public class Type extends Word {
         add(Bool);
     }};
 
+    public static Type getTypeByName(String name){
+        for(Type t : reservedTypes){
+            if(t.lexeme.equals(name)) return t;
+        }
+        return null;
+    }
+
     public static boolean isNumber(Type p){
         return p == Type.Char || p == Type.Int;
     }

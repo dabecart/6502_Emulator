@@ -42,5 +42,9 @@ public class Tag {
                             INDEX = 512,    // For access to arrays (index)
                             LABEL = 513,
 
-                            GOTO = 600;
+                            GOTO = 600,
+
+                            CAST = 700;
+
+                            
 }
