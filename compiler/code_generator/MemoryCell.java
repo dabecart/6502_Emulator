@@ -11,7 +11,6 @@ public class MemoryCell {
     public MemoryCell(Type type, int address){
         this.type = type;
         this.address = address;
-        address += type.byteSize; // Increase memory pointer in CPU.
     }
 
 

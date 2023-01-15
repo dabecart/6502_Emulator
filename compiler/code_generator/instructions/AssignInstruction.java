@@ -1,10 +1,10 @@
 package compiler.code_generator.instructions;
 
 import compiler.code_generator.Generator;
+import compiler.code_generator.MemoryCell;
 import compiler.code_generator.SystemOperators;
 import compiler.intermediate.operators.ArrayAccess;
 import compiler.intermediate.three_address.Quadruple;
-import compiler.symbols.Type;
 
 public class AssignInstruction extends Quadruple{
 
@@ -35,12 +35,8 @@ public class AssignInstruction extends Quadruple{
     }
 
     public String generate(Generator gen){
-        Type resultType = this.result.type;
-        
-        
-        if(this.arg1.type != resultType){
-
-        }
+        MemoryCell from = gen.getMemoryCell(arg1.getName());
+        MemoryCell to = gen.getMemoryCell(result.getName());
         return "PEPE"; //TODO: HERE I LEFT!
     }
 }

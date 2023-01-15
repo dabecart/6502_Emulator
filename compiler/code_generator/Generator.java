@@ -30,8 +30,9 @@ public class Generator {
         for(Quadruple q : intermediateCode){
             if(q.result instanceof ArrayAccess){
                 Array arr = (Array) ((ArrayAccess)q.result).array.type;
+                int startArrayAddress = memoryCounter;
                 for(int i = 0; i < arr.size; i++){
-                    addToMemory(arr.toString() + "_" + i, arr.of);
+                    addToMemory(arr.toString() + "[" + i + "]", arr.of, startArrayAddress, i);
                 }
             }else{
                 addToMemory(q.toString(), q.result.type);
@@ -51,6 +52,17 @@ public class Generator {
         memory.put(name, mem);
         memoryCounter += type.byteSize;
         return mem;
+    }
+
+    public MemoryCell addToMemory(String name, Type type, int startAddress, int arrayIndex){
+        ArrayCell mem = new ArrayCell(type, memoryCounter, startAddress, arrayIndex);
+        memory.put(name, mem);
+        memoryCounter += type.byteSize;
+        return mem;
+    }
+
+    public MemoryCell getMemoryCell(String name){
+        return memory.get(name);
     }
 
 }
