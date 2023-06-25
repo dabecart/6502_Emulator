@@ -2,7 +2,7 @@
 
 The 6502 Emulator consists on both emulator and compiler (work in progress) for my own 6502 PC.
 
-The emulator mostly works with all the most used instructions of the 6502. It keeps count of the PC, flag bits, address and data bus, registers and stack pointer. It also simulates some of the most common
+The emulator works with all the most used instructions of the 6502. It keeps count of the PC, flag bits, address and data bus, registers and stack pointer. It also simulates some of the most common
 peripherals, like the 6522 VIA (Versatile Interface Adapter), ROM and RAM chips, as well as a PS/2 keyboard. For more info on those, take a look at Ben Eater's Youtube channel, most of the inspiration 
 came from him. 
 
