@@ -3,6 +3,7 @@ package compiler.code_generator;
 import java.util.HashMap;
 import java.util.List;
 
+import compiler.intermediate.Id;
 import compiler.intermediate.operators.ArrayAccess;
 import compiler.intermediate.three_address.Intermediate;
 import compiler.intermediate.three_address.Quadruple;
@@ -28,17 +29,23 @@ public class Generator {
 
     public void generate(){
         for(Quadruple q : intermediateCode){
+            System.out.println(q);
+            
             if(q.result instanceof ArrayAccess){
-                Array arr = (Array) ((ArrayAccess)q.result).array.type;
+                Id arrId = ((ArrayAccess)q.result).array;
+                Array arr = (Array) arrId.type;
                 int startArrayAddress = memoryCounter;
                 for(int i = 0; i < arr.size; i++){
-                    addToMemory(arr.toString() + "[" + i + "]", arr.of, startArrayAddress, i);
+                    addToMemory(arrId.toString() + "[" + i + "]", arr.of, startArrayAddress, i);
                 }
             }else{
-                addToMemory(q.toString(), q.result.type);
+                addToMemory(q.result.toString(), q.result.type);
             }
             
-            out.append(q + "\n");
+            // To view the reduced three address code
+            //out.append(q + "\n");
+
+            out.append(q.generate(this) + "\n");
         }
     }
 

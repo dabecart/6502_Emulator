@@ -1,6 +1,5 @@
 package compiler.code_generator;
 
-import compiler.symbols.Array;
 import compiler.symbols.Type;
 
 public class ArrayCell extends MemoryCell{

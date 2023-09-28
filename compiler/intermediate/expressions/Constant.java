@@ -21,6 +21,13 @@ public class Constant extends Expression {
         super(new Num(num), Type.Int);
     }
 
+    public Expression castToType(Type toType){
+        if(toType.isNumber()){
+            return new Constant(op, toType);
+        }
+        throw new Error("Cannot cast from " + this.type + " to " + toType);
+    }
+
     public void jump(Label trueLabel, Label falseLabel){
         if(this == True && trueLabel != null) gotoLabel(trueLabel);
         else if(this == False && falseLabel != null) gotoLabel(falseLabel);
